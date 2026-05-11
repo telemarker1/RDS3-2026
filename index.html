@@ -19,27 +19,32 @@
       flex-direction: column;
     }
 
+    /* ── 공통 패딩 (헤더-컬럼 정렬 기준) ── */
+    :root {
+      --pad-env:  clamp(12px, 1.5vw, 28px);
+      --pad-col:  0px;
+      --pad-v:    clamp(8px, 1vh, 14px);
+    }
+
     /* ── HEADER ROW ── */
     #header {
       display: flex;
       flex-shrink: 0;
-      /*border-bottom: 1px solid #d0d0d0;*/
     }
     .header-cell {
-      padding: 10px 20px;
-      font-size: 12px;
+      padding: var(--pad-v) 0;
+      font-size: clamp(9px, 0.8vw, 13px);
       color: #111;
       text-decoration: underline;
       text-decoration-thickness: 0.5px;
       text-underline-offset: 0.5px;
-      /*border-right: 1px solid #d0d0d0;*/
     }
     .header-cell:last-child { border-right: none; }
 
-    #h-env   { width: 500px; flex-shrink: 0; padding: 10px 24px; }
-    #h-prev  { width: 224px; flex-shrink: 0; }
-    #h-mark  { width: 200px; flex-shrink: 0; }
-    #h-proc  { width: 220px; flex-shrink: 0; }
+    #h-env  { flex: 3; min-width: 280px; max-width: 500px; padding-left: var(--pad-env); }
+    #h-prev { flex: 1.5; min-width: 180px; max-width: 240px; padding-left: var(--pad-col); }
+    #h-mark { flex: 1.2; min-width: 150px; max-width: 240px; padding-left: var(--pad-col); }
+    #h-proc { flex: 1.2; min-width: 150px; max-width: 240px; padding-left: var(--pad-col); }
 
     /* ── MAIN ROW ── */
     #main {
@@ -48,24 +53,23 @@
       overflow: hidden;
     }
 
-    /* vertical dividers */
     .col {
-      /*border-right: 1px solid #d0d0d0;*/
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
     .col:last-child { border-right: none; }
 
-    /* ── COL 1: ENVIRONMENT INDEX ── */
+    /* ── COL 1: ENV ── */
     #col-env {
-      width: 500px;
-      flex-shrink: 0;
-      padding: 20px 20px 20px 24px;
+      flex: 3;
+      min-width: 300px;
+      max-width: 500px;
+      padding: clamp(12px, 2vh, 28px) clamp(12px, 1.5vw, 28px);
       overflow-y: auto;
     }
     .env-names {
-      font-size: clamp(26px, 3vw, 46px);
+      font-size: clamp(30px, 3.0vw, 52px);
       line-height: 1.15;
     }
     .env-name {
@@ -78,95 +82,94 @@
       color: #111;
       text-decoration-color: #111;
     }
-    .env-name.active  { color: #000; text-decoration-color: #000; }
-    .env-name.inactive{ color: #ccc; text-decoration-color: #ccc; }
+    .env-name.active   { color: #000; text-decoration-color: #000; }
+    .env-name.inactive { color: #ccc; text-decoration-color: #ccc; }
 
     /* ── COL 2: PREVIEW ── */
     #col-prev {
-      width: 224px;
-      flex-shrink: 0;
-      padding: 16px 16px 16px 16px;
+      flex: 1.5;
+      min-width: 180px;
+      max-width: 240px;
+      padding: clamp(10px, 1.5vh, 20px) clamp(10px, 1.2vw, 20px) clamp(10px, 1.5vh, 20px) var(--pad-col);
       overflow-y: auto;
-      gap: 14px;
+      gap: clamp(8px, 1.2vh, 16px);
       display: flex;
       flex-direction: column;
+      align-items: flex-start;
     }
     .preview-item {
       display: flex;
       flex-direction: column;
-      width: 192px;
+      width: 100%;
+      max-width: 192px;
       cursor: pointer;
       transition: opacity 0.15s;
     }
-    .preview-item.disabled {
-      opacity: 0.25;
-      pointer-events: none;
-    }
-    .preview-item.selected .preview-sub-label {
-      background: #111;
-      color: #fff;
-    }
+    .preview-item.disabled { opacity: 0.25; pointer-events: none; }
+    .preview-item.selected .preview-sub-label { background: #111; color: #fff; }
+
     .preview-sub-label {
-      font-size: 8px;
+      font-size: clamp(7px, 0.6vw, 9px);
       color: #111;
       letter-spacing: 0.1em;
       background: #ebebeb;
       padding: 3px 7px;
-      width: 192px;
+      width: 100%;
       transition: background 0.12s, color 0.12s;
     }
     .preview-img {
-      width: 192px;
-      height: 75px;
+      width: 100%;
+      height: clamp(55px, 6vh, 90px);
       object-fit: cover;
       display: block;
       background: #e0e0e0;
     }
     .preview-img-ph {
-      width: 192px;
-      height: 75px;
+      width: 100%;
+      height: clamp(55px, 6vh, 90px);
       background: #ebebeb;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 8px;
+      font-size: clamp(7px, 0.6vw, 9px);
       color: #bbb;
       letter-spacing: 0.08em;
     }
     #preview-hint {
-      font-size: 10px;
+      font-size: clamp(8px, 0.7vw, 11px);
       color: #ccc;
       letter-spacing: 0.08em;
-      margin-top: 4px;
     }
 
     /* ── COL 3: MARKERS ── */
     #col-mark {
-      width: 200px;
-      flex-shrink: 0;
-      padding: 16px 12px;
+      flex: 1.2;
+      min-width: 150px;
+      max-width: 240px;
+      padding: clamp(10px, 1.5vh, 20px) clamp(8px, 1vw, 16px) clamp(10px, 1.5vh, 20px) var(--pad-col);
       overflow-y: auto;
       display: flex;
       flex-direction: column;
+      align-items: flex-start;
       gap: 4px;
     }
     .marking-icon-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: clamp(4px, 0.5vw, 10px);
       cursor: pointer;
       padding: 3px 4px;
       transition: background 0.1s;
       border: 1px solid transparent;
+      width: 100%;
     }
     .marking-icon-row:hover:not(.disabled-marker) { background: #f4f4f4; }
     .marking-icon-row.selected-marker { border-color: #111; }
-    .marking-icon-row.disabled-marker {
-      opacity: 0.2;
-      pointer-events: none;
-    }
+    .marking-icon-row.disabled-marker { opacity: 0.2; pointer-events: none; }
+
     .mi-thumb {
-      width: 36px; height: 36px;
+      width: clamp(26px, 2.2vw, 40px);
+      height: clamp(26px, 2.2vw, 40px);
       border: 1px solid #e0e0e0;
       background: #f8f8f8;
       flex-shrink: 0;
@@ -174,19 +177,25 @@
       overflow: hidden;
       transition: background 0.12s, border-color 0.12s;
     }
-    .mi-thumb img { width: 26px; height: 26px; object-fit: contain; }
+    .mi-thumb img {
+      width: 75%; height: 75%;
+      object-fit: contain;
+    }
     .mi-thumb-ph { font-size: 6px; color: #ccc; text-align: center; letter-spacing: 0.03em; line-height: 1.3; }
     .marking-icon-row.selected-marker .mi-thumb { background: #111; border-color: #111; }
     .marking-icon-row.selected-marker .mi-thumb-ph { color: #fff; }
     .mi-name {
-      font-size: 8px;
+      font-size: clamp(7px, 0.65vw, 9px);
       color: #555;
       letter-spacing: 0.04em;
       line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .marking-icon-row.selected-marker .mi-name { color: #111; }
     #markers-hint {
-      font-size: 10px;
+      font-size: clamp(8px, 0.7vw, 11px);
       color: #ccc;
       letter-spacing: 0.08em;
       line-height: 1.7;
@@ -194,86 +203,91 @@
 
     /* ── COL 4: PROCEED ── */
     #col-proc {
-      width: 220px;
-      flex-shrink: 0;
-      padding: 16px 18px;
+      flex: 1.2;
+      min-width: 150px;
+      max-width: 240px;
+      padding: clamp(10px, 1.5vh, 20px) clamp(10px, 1.2vw, 20px) clamp(10px, 1.5vh, 20px) var(--pad-col);
       display: flex;
       flex-direction: column;
+      align-items: flex-start;
       gap: 0;
     }
+    #proceed-top {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: clamp(8px, 0.8vw, 14px);
+      margin-bottom: clamp(8px, 1.2vh, 16px);
+      width: 100%;
+    }
     #proceed-guide {
-      font-size: 10px;
+      font-size: clamp(8px, 0.75vw, 11px);
       color: #bbb;
       letter-spacing: 0.04em;
       line-height: 1.7;
-      margin-bottom: 14px;
+      flex: 1;
     }
 
-    /* 심볼 그래픽 div */
     #symbol-box {
       width: 100%;
       aspect-ratio: 1;
       background: #ebebeb;
-      margin-bottom: 10px;
+      margin-bottom: clamp(6px, 1vh, 12px);
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
       flex-shrink: 0;
+      max-height: 30vh; /* 큰 화면에서 너무 커지지 않도록 */
     }
-    #symbol-box img {
-      width: 80%;
-      height: 80%;
-      object-fit: contain;
-    }
+    #symbol-box img { width: 80%; height: 80%; object-fit: contain; }
     #symbol-box .sym-ph {
-      font-size: 8px;
+      font-size: clamp(7px, 0.6vw, 9px);
       color: #bbb;
       letter-spacing: 0.08em;
       text-align: center;
     }
 
-    /* 선택된 마킹 정보 */
     #sel-info {
-      font-size: 9px;
+      font-size: clamp(7px, 0.65vw, 10px);
       color: #333;
       letter-spacing: 0.04em;
       line-height: 1.8;
-      margin-bottom: 14px;
+      margin-bottom: clamp(8px, 1.2vh, 16px);
     }
-    #sel-info .sel-name { font-size: 11px; color: #111; display: block; margin-bottom: 2px; }
-    #sel-info .sel-role { font-size: 8px; color: #aaa; letter-spacing: 0.12em; }
+    #sel-info .sel-name {
+      font-size: clamp(9px, 0.85vw, 12px);
+      color: #111; display: block; margin-bottom: 2px;
+    }
+    #sel-info .sel-role { font-size: clamp(6px, 0.55vw, 8px); color: #aaa; letter-spacing: 0.12em; }
 
-    /* proceed button */
     #proceed-btn {
-      width: 28px; height: 28px;
+      width: clamp(22px, 2vw, 32px);
+      height: clamp(22px, 2vw, 32px);
       border: 1.5px solid #ccc;
       background: #fff;
       display: flex; align-items: center; justify-content: center;
       cursor: not-allowed;
       transition: all 0.18s;
       text-decoration: none;
-      margin-top: auto;
+      flex-shrink: 0;
     }
     #proceed-btn.active { border-color: #111; background: #111; cursor: pointer; }
     #proceed-btn .arrow-line { stroke: #ccc; transition: stroke 0.18s; }
     #proceed-btn.active .arrow-line { stroke: #fff; }
 
-        /* copyright */
+    /* copyright */
     #col-copyright {
-      font-size: 14px;
+      font-size: clamp(10px, 0.85vw, 15px);
       color: #141414;
       letter-spacing: 0.04em;
       line-height: 1.7;
-      padding: 20px 20px 10px 24px;
-      text-align: left;
-      align-items: left;
+      padding: clamp(10px, 1.5vh, 22px) clamp(12px, 1.5vw, 26px);
     }
-
 
     /* ── BOTTOM BG ── */
     #bottom-bg {
-      height: 130px;
+      height: clamp(80px, 12vh, 160px);
       flex-shrink: 0;
       overflow: hidden;
       background: #ebebeb;
@@ -288,18 +302,18 @@
       background: #fff;
       border: 1px solid #ddd;
       padding: 9px 11px;
-      font-size: 8px;
+      font-size: clamp(7px, 0.65vw, 9px);
       color: #555;
       line-height: 1.8;
-      max-width: 190px;
+      max-width: clamp(140px, 14vw, 210px);
       pointer-events: none;
       z-index: 200;
       display: none;
       box-shadow: 0 2px 8px rgba(0,0,0,0.07);
       letter-spacing: 0.05em;
     }
-    #tooltip .tt-name { font-size: 10px; color: #111; margin-bottom: 3px; }
-    #tooltip .tt-role { font-size: 7px; color: #aaa; letter-spacing: 0.12em; }
+    #tooltip .tt-name { font-size: clamp(8px, 0.75vw, 11px); color: #111; margin-bottom: 3px; }
+    #tooltip .tt-role { font-size: clamp(6px, 0.55vw, 8px); color: #aaa; letter-spacing: 0.12em; }
 
     ::-webkit-scrollbar { width: 2px; }
     ::-webkit-scrollbar-thumb { background: #ddd; }
@@ -318,43 +332,35 @@
 <!-- MAIN -->
 <div id="main">
 
-  <!-- COL 1: ENV -->
   <div class="col" id="col-env">
     <div class="env-names" id="env-names"></div>
   </div>
 
-  <!-- COL 2: PREVIEW -->
   <div class="col" id="col-prev">
     <div id="preview-hint">Select an environment.</div>
   </div>
 
-  <!-- COL 3: MARKERS -->
   <div class="col" id="col-mark">
     <div id="markers-hint">—</div>
   </div>
 
-  <!-- COL 4: PROCEED -->
   <div class="col" id="col-proc">
-    <div id="proceed-guide">Choose Your<br>marker<br>to Proceed.</div>
-    <div id="symbol-box">
-      <div class="sym-ph">fig.</div>
+    <div id="proceed-top">
+      <div id="proceed-guide">Choose Your<br>marker<br>to Proceed.</div>
+      <a id="proceed-btn" href="#">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+          <line class="arrow-line" x1="2" y1="9" x2="15" y2="9" stroke-width="1.5"/>
+          <polyline class="arrow-line" points="10,4 15,9 10,14" stroke-width="1.5" fill="none"/>
+        </svg>
+      </a>
     </div>
+    <div id="symbol-box"><div class="sym-ph">fig.</div></div>
     <div id="sel-info"></div>
-  </div>
-
-  <div>
-    <div id="sel-info"></div>
-    <a id="proceed-btn" href="#">
-      <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-        <line class="arrow-line" x1="2" y1="9" x2="15" y2="9" stroke-width="1.5"/>
-        <polyline class="arrow-line" points="10,4 15,9 10,14" stroke-width="1.5" fill="none"/>
-      </svg>
-    </a>
   </div>
 
 </div>
 
-<div class="col" id="col-copyright">© 2026, Kim Younjae, all rights reserved</div> 
+<div id="col-copyright">© 2026, Kim Younjae, all rights reserved</div>
 
 <!-- BOTTOM BG -->
 <div id="bottom-bg"><div class="bg-ph"></div></div>
@@ -390,12 +396,8 @@ const SUB_EN = {
   '농지':'Farmland','물류':'Logistics','우주':'Space','화성':'Mars',
 };
 
-let cmsMarkings   = [];
-let activeEnvId   = null;   // 선택된 대환경
-let activeSubEnv  = null;   // 선택된 세부환경
-let selectedMarkId= null;   // 선택된 마킹
+let cmsMarkings = [], activeEnvId = null, activeSubEnv = null, selectedMarkId = null;
 
-// ── INIT ──
 async function init() {
   renderEnvList();
   await loadCMS();
@@ -403,11 +405,10 @@ async function init() {
 
 function renderEnvList() {
   document.getElementById('env-names').innerHTML = ENVIRONMENTS.map(env =>
-    `<span class="env-name" data-env="${env.id}" onclick="clickEnv('${env.id}')">${env.label}</span>`
+    '<span class="env-name" data-env="' + env.id + '" onclick="clickEnv(\'' + env.id + '\')">' + env.label + '</span>'
   ).join('<br>');
 }
 
-// ── CMS ──
 async function loadCMS() {
   if (!SHEET_CSV_URL) return;
   try {
@@ -422,7 +423,7 @@ async function loadCMS() {
       hdrs.forEach((h,i) => obj[h] = (cols[i]||'').trim().replace(/^"|"$/g,''));
       return obj;
     }).filter(m => m.id);
-    console.log(`Loaded ${cmsMarkings.length} markings`);
+    console.log('Loaded', cmsMarkings.length, 'markings');
   } catch(e) { console.warn('CMS failed:', e); }
 }
 
@@ -436,67 +437,53 @@ function parseCsv(line) {
   r.push(c); return r;
 }
 
-// ── ENV CLICK ──
 function clickEnv(envId) {
-  activeEnvId  = envId;
-  activeSubEnv = null;
-  selectedMarkId = null;
-
+  activeEnvId = envId; activeSubEnv = null; selectedMarkId = null;
   document.querySelectorAll('.env-name').forEach(el => {
     el.classList.toggle('active',   el.dataset.env === envId);
     el.classList.toggle('inactive', el.dataset.env !== envId);
   });
-
   const env = ENVIRONMENTS.find(e => e.id === envId);
   renderPreviews(env);
-  renderMarkers(null); // 마커 열 비워두기 (아무 sub 선택 전)
+  renderMarkers(null);
   resetProceed();
   updateBg(env);
 }
 
-// ── PREVIEW COL ──
 function renderPreviews(env) {
   const col = document.getElementById('col-prev');
   const markingsInEnv = cmsMarkings.filter(m => m.env_main === env.env_main);
   const subEnvs = [...new Set(markingsInEnv.map(m => m.env_sub))];
 
   if (subEnvs.length === 0) {
-    col.innerHTML = `<div id="preview-hint">No data for this environment.</div>`;
+    col.innerHTML = '<div id="preview-hint">No data.</div>';
     return;
   }
-
   col.innerHTML = subEnvs.map(sub => {
     const rep    = markingsInEnv.find(m => m.env_sub === sub);
     const bgUrl  = getSatUrl(rep, -2);
     const labelEn= SUB_EN[sub] || sub;
-    return `
-      <div class="preview-item" data-sub="${sub}" onclick="clickSubEnv('${env.id}','${sub}')">
-        <div class="preview-sub-label">${labelEn}</div>
-        ${bgUrl
-          ? `<img class="preview-img" src="${bgUrl}" alt="${labelEn}"/>`
-          : `<div class="preview-img-ph">${labelEn}</div>`}
-      </div>`;
+    return '<div class="preview-item" data-sub="' + sub + '" onclick="clickSubEnv(\'' + env.id + '\',\'' + sub + '\')">'
+      + '<div class="preview-sub-label">' + labelEn + '</div>'
+      + (bgUrl
+        ? '<img class="preview-img" src="' + bgUrl + '" alt="' + labelEn + '"/>'
+        : '<div class="preview-img-ph">' + labelEn + '</div>')
+      + '</div>';
   }).join('');
 }
 
-// ── SUB-ENV CLICK ──
 function clickSubEnv(envId, sub) {
-  activeSubEnv = sub;
-  selectedMarkId = null;
-
-  // preview items: 선택된 것만 active, 나머지 disabled
+  activeSubEnv = sub; selectedMarkId = null;
   document.querySelectorAll('.preview-item').forEach(el => {
     const isSel = el.dataset.sub === sub;
-    el.classList.toggle('selected',  isSel);
-    el.classList.toggle('disabled',  !isSel);
+    el.classList.toggle('selected', isSel);
+    el.classList.toggle('disabled', !isSel);
   });
-
   const env = ENVIRONMENTS.find(e => e.id === envId);
   renderMarkers(sub, env);
   resetProceed();
 }
 
-// ── MARKERS COL ──
 function makeMarkerRow(m, disabled) {
   const thumbHtml = m.symbol_img
     ? '<img src="' + m.symbol_img + '" alt="' + m.name_en + '"/>'
@@ -513,47 +500,31 @@ function makeMarkerRow(m, disabled) {
 
 function renderMarkers(sub, env) {
   const col = document.getElementById('col-mark');
-
-  if (!sub) {
-    col.innerHTML = '<div id="markers-hint">Select a preview to see markers.</div>';
-    return;
-  }
-
-  const all = env
-    ? cmsMarkings.filter(function(m){ return m.env_main === env.env_main; })
-    : cmsMarkings;
-  const subMarkings   = all.filter(function(m){ return m.env_sub === sub; });
-  const otherMarkings = all.filter(function(m){ return m.env_sub !== sub; });
-
-  var html = subMarkings.map(function(m){ return makeMarkerRow(m, false); }).join('');
-  if (otherMarkings.length > 0) {
+  if (!sub) { col.innerHTML = '<div id="markers-hint">Select a preview.</div>'; return; }
+  const all = env ? cmsMarkings.filter(m => m.env_main === env.env_main) : cmsMarkings;
+  const subM  = all.filter(m => m.env_sub === sub);
+  const otherM= all.filter(m => m.env_sub !== sub);
+  let html = subM.map(m => makeMarkerRow(m, false)).join('');
+  if (otherM.length > 0) {
     html += '<div style="height:1px;background:#e8e8e8;margin:6px 0;"></div>';
-    html += otherMarkings.map(function(m){ return makeMarkerRow(m, true); }).join('');
+    html += otherM.map(m => makeMarkerRow(m, true)).join('');
   }
   col.innerHTML = html;
 }
 
-// ── SELECT MARKING ──
 function selectMarking(markingId, envId) {
   selectedMarkId = markingId;
   const m = cmsMarkings.find(x => x.id === markingId);
   if (!m) return;
-
   document.querySelectorAll('.marking-icon-row').forEach(el =>
     el.classList.toggle('selected-marker', el.dataset.id === markingId));
-
-  // proceed col
   const symBox = document.getElementById('symbol-box');
-  if (m.symbol_img) {
-    symBox.innerHTML = `<img src="${m.symbol_img}" alt="${m.name_en}"/>`;
-  } else {
-    symBox.innerHTML = `<div class="sym-ph">fig.</div>`;
-  }
-
+  symBox.innerHTML = m.symbol_img
+    ? '<img src="' + m.symbol_img + '" alt="' + m.name_en + '"/>'
+    : '<div class="sym-ph">fig.</div>';
   document.getElementById('sel-info').innerHTML =
-    `<span class="sel-name">${m.name_en}</span>
-     <span class="sel-role">${m.marker_type} &nbsp;·&nbsp; ${m.spatial_role}</span>`;
-
+    '<span class="sel-name">' + m.name_en + '</span>'
+    + '<span class="sel-role">' + m.marker_type + ' &nbsp;·&nbsp; ' + m.spatial_role + '</span>';
   const btn = document.getElementById('proceed-btn');
   btn.classList.add('active');
   const p = new URLSearchParams({
@@ -563,55 +534,51 @@ function selectMarking(markingId, envId) {
     env_sub:  m.env_sub  || '',
     name: m.name_en || markingId,
   });
-  btn.href = `${INFINITE_FLOOR_URL}?${p.toString()}`;
+  btn.href = INFINITE_FLOOR_URL + '?' + p.toString();
 }
 
 function resetProceed() {
-  document.getElementById('symbol-box').innerHTML = `<div class="sym-ph">fig.</div>`;
+  document.getElementById('symbol-box').innerHTML = '<div class="sym-ph">fig.</div>';
   document.getElementById('sel-info').innerHTML = '';
   const btn = document.getElementById('proceed-btn');
   btn.classList.remove('active');
   btn.href = '#';
 }
 
-// ── BG ──
 function updateBg(env) {
   const container = document.getElementById('bottom-bg');
   const m = cmsMarkings.find(x => x.env_main === env.env_main && x.env_bg_img);
   if (m?.env_bg_img) {
-    container.innerHTML = `<img src="${m.env_bg_img}" alt="${env.label}"/>`;
+    container.innerHTML = '<img src="' + m.env_bg_img + '" alt="' + env.label + '"/>';
     return;
   }
   const first = cmsMarkings.find(x => x.env_main === env.env_main);
   if (first?.lat && MAPS_API_KEY) {
     const z = Math.max(1,(parseInt(first.zoom)||14)-3);
-    container.innerHTML = `<img src="https://maps.googleapis.com/maps/api/staticmap?center=${first.lat},${first.lng}&zoom=${z}&size=1400x300&maptype=satellite&key=${MAPS_API_KEY}" alt="${env.label}"/>`;
+    container.innerHTML = '<img src="https://maps.googleapis.com/maps/api/staticmap?center=' + first.lat + ',' + first.lng + '&zoom=' + z + '&size=1400x300&maptype=satellite&key=' + MAPS_API_KEY + '" alt="' + env.label + '"/>';
   } else {
-    container.innerHTML = `<div class="bg-ph"></div>`;
+    container.innerHTML = '<div class="bg-ph"></div>';
   }
 }
 
 function getSatUrl(m, zoomOffset=0) {
-  if (!m || !MAPS_API_KEY) return '';
-  if (!m.lat || !m.lng) return '';
+  if (!m || !MAPS_API_KEY || !m.lat || !m.lng) return '';
   const z = Math.max(1,(parseInt(m.zoom)||14)+zoomOffset);
-  return `https://maps.googleapis.com/maps/api/staticmap?center=${m.lat},${m.lng}&zoom=${z}&size=400x200&maptype=satellite&key=${MAPS_API_KEY}`;
+  return 'https://maps.googleapis.com/maps/api/staticmap?center=' + m.lat + ',' + m.lng + '&zoom=' + z + '&size=400x200&maptype=satellite&key=' + MAPS_API_KEY;
 }
 
-// ── TOOLTIP ──
 function showTooltip(e, id) {
   const m = cmsMarkings.find(x => x.id === id);
   if (!m) return;
   document.getElementById('tt-name').textContent = m.name_en;
-  document.getElementById('tt-role').textContent = `${m.marker_type} · ${m.spatial_role}`;
+  document.getElementById('tt-role').textContent = m.marker_type + ' · ' + m.spatial_role;
   document.getElementById('tt-desc').textContent = m.description_en || '';
-  const tt = document.getElementById('tooltip');
-  tt.style.display = 'block';
+  document.getElementById('tooltip').style.display = 'block';
   moveTT(e);
 }
 function moveTT(e) {
   const tt = document.getElementById('tooltip');
-  tt.style.left = Math.min(e.clientX+14, window.innerWidth-200)+'px';
+  tt.style.left = Math.min(e.clientX+14, window.innerWidth-220)+'px';
   tt.style.top  = Math.max(8, e.clientY-10)+'px';
 }
 function hideTooltip() { document.getElementById('tooltip').style.display='none'; }

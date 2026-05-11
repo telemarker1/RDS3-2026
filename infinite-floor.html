@@ -378,6 +378,10 @@ const P_NAME    = params.get('name') || P_MARKER;
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTON2Qa5hkrL3ptGGKrwGqtZew1QPZJwrSM7vcrVkgoNDx6YL2zrNE62pwq3P_3HexSbKjw9GSvdlix/pub?gid=1413106417&single=true&output=csv';
 const MAPS_API_KEY  = 'AIzaSyBai5eeiJEuQdCdDgE4uMBfgcHzax39GBQ';
 
+// ── 배경 이미지 URL (바꾸고 싶으면 여기만 수정) ──
+// 비워두면 기본 회색(#f2f2f2), URL 넣으면 해당 이미지가 배경으로 깔림
+const FLOOR_BG_IMG = ''; // 예: 'https://res.cloudinary.com/...'
+
 // ── CMS ──
 let cmsMarkings = [];
 let selectedMarkingData = null;
@@ -424,47 +428,31 @@ const TYPE_KEYWORDS = {
 // 이미지 캐시 (중복 호출 방지)
 const imgCache = {};
 
-async function fetchWikimediaImages(markerData, count=4) {
-  const subEnv = P_ENV_SUB || '';
+async function fetchWikimediaImages(markerData, count=6) {
+  const subEnv = (P_ENV_SUB || '').replace(/[^a-zA-Z0-9 ]/g, '');
   const typeKw = TYPE_KEYWORDS[markerData.marker_type] || '';
-  const query  = (subEnv + ' ' + markerData.name_en + ' ' + typeKw).trim();
+  const query  = (subEnv + ' ' + typeKw).trim();
 
   if (imgCache[query]) return imgCache[query];
 
   try {
-    // 1단계: 파일 목록 검색
-    const searchUrl = 'https://commons.wikimedia.org/w/api.php?action=query&list=search'
-      + '&srsearch=' + encodeURIComponent(query)
-      + '&srnamespace=6&format=json&origin=*&srlimit=20';
+    // generator=search 로 검색+imageinfo 한 번에
+    const url = 'https://commons.wikimedia.org/w/api.php?action=query'
+      + '&generator=search&gsrsearch=' + encodeURIComponent(query)
+      + '&gsrnamespace=6&gsrlimit=20'
+      + '&prop=imageinfo&iiprop=url&iiurlwidth=600'
+      + '&format=json&origin=*';
 
-    const searchRes  = await fetch(searchUrl);
-    const searchData = await searchRes.json();
-    const titles = (searchData.query && searchData.query.search ? searchData.query.search : [])
-      .map(function(r){ return r.title; })
-      .filter(function(t){ return t.match(/\.(jpg|jpeg|png|gif|webp)$/i); }) // jpg/png만
-      .slice(0, count * 2);
+    const res  = await fetch(url);
+    const data = await res.json();
+    const pages = Object.values((data.query && data.query.pages) ? data.query.pages : {});
 
-    if (titles.length === 0) { imgCache[query] = []; return []; }
+    const urls = pages
+      .filter(function(p){ return p.imageinfo && p.imageinfo[0] && p.imageinfo[0].url; })
+      .filter(function(p){ return !p.title.match(/\.(pdf|svg|djvu|ogv|ogg|mp3|wav|webm)$/i); })
+      .map(function(p){ return p.imageinfo[0].url; });
 
-    // 2단계: 타이틀 하나씩 imageinfo 요청
-    const urls = [];
-    for (var i = 0; i < titles.length; i++) {
-      try {
-        const t = titles[i].replace(/ /g, '_');
-        const infoUrl = 'https://commons.wikimedia.org/w/api.php?action=query'
-          + '&titles=' + encodeURIComponent(t)
-          + '&prop=imageinfo&iiprop=url&format=json&origin=*&iiurlwidth=600';
-        const infoRes  = await fetch(infoUrl);
-        const infoData = await infoRes.json();
-        const page = Object.values(infoData.query.pages)[0];
-        if (page && page.imageinfo && page.imageinfo[0] && page.imageinfo[0].url) {
-          urls.push(page.imageinfo[0].url);
-        }
-        if (urls.length >= count) break;
-      } catch(e2) { continue; }
-    }
-
-    console.log('Wikimedia URLs for "' + query + '":', urls);
+    console.log('Wikimedia pool for "' + query + '":', urls.length, 'images');
     imgCache[query] = urls;
     return urls;
   } catch(e) {
@@ -586,11 +574,41 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xf2f2f2);
-scene.fog = new THREE.Fog(0xf2f2f2, 80, 600);
 
 const W=40, CELL=2, FAR=600, BACK=20, Y=0;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xffffff); // 캔버스 배경색
+scene.fog = new THREE.Fog(0xf2f2f2, 80, 600);
+
+// 배경 이미지 — 바닥 평면에 프로젝션
+if (FLOOR_BG_IMG) {
+  new THREE.TextureLoader().load(FLOOR_BG_IMG, function(tex) {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(1, 1);
+    const floorGeo = new THREE.PlaneGeometry(W*2, FAR+BACK);
+    const floorMat = new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    });
+    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+    floorMesh.rotation.x = -Math.PI / 2;
+    floorMesh.position.set(0, Y - 0.001, -(FAR/2) + BACK/2);
+    scene.add(floorMesh);
+  });
+} else {
+  // 배경 없으면 단색 바닥
+  const floorGeo = new THREE.PlaneGeometry(W*2, FAR+BACK);
+  const floorMat = new THREE.MeshBasicMaterial({color: 0xf2f2f2, depthWrite: false});
+  const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+  floorMesh.rotation.x = -Math.PI / 2;
+  floorMesh.position.set(0, Y - 0.001, -(FAR/2) + BACK/2);
+  scene.add(floorMesh);
+}
+
 const camera3 = new THREE.PerspectiveCamera(70,1,0.05,660);
 
 scene.add(new THREE.AmbientLight(0xffffff,0.9));
@@ -650,27 +668,30 @@ function revealCell(col,row,light,dark,anchorId,opacity=0.88){
   revealedCells[key]={mesh,anchorId,col,row,colorLight:light,colorDark:dark};
   document.getElementById('stat-discovery').textContent=Object.keys(revealedCells).length;
 
-  // Wikimedia 이미지 비동기 로드
-  const imgUrl = getNextImg();
-  if (imgUrl) {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      ctx.clearRect(0,0,256,256);
-      // 이미지를 정사각형으로 크롭해서 그리기
-      const s = Math.min(img.width, img.height);
-      const sx = (img.width - s) / 2;
-      const sy = (img.height - s) / 2;
-      ctx.drawImage(img, sx, sy, s, s, 0, 0, 256, 256);
-      tex.needsUpdate = true;
-    };
-    img.onerror = () => {
-      // 실패시 다음 이미지 시도
-      const nextUrl = getNextImg();
-      if (nextUrl && nextUrl !== imgUrl) { img.src = nextUrl; }
-    };
-    img.src = imgUrl;
+  // Wikimedia 이미지 비동기 로드 (풀 준비 안됐으면 대기 후 재시도)
+  function tryLoadImg(retries) {
+    const imgUrl = getNextImg();
+    if (imgUrl) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        ctx.clearRect(0,0,256,256);
+        const s = Math.min(img.width, img.height);
+        const sx = (img.width - s) / 2;
+        const sy = (img.height - s) / 2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, 256, 256);
+        tex.needsUpdate = true;
+      };
+      img.onerror = function() {
+        if (retries > 0) setTimeout(function(){ tryLoadImg(retries-1); }, 500);
+      };
+      img.src = imgUrl;
+    } else if (retries > 0) {
+      // 풀 아직 비어있으면 500ms 후 재시도
+      setTimeout(function(){ tryLoadImg(retries-1); }, 500);
+    }
   }
+  tryLoadImg(20); // 최대 10초 대기
 }
 
 function drawColorCell(ctx,light,dark){
@@ -959,7 +980,207 @@ function animate(){
 }
 animate();
 
-function exportWebsite(){ alert('Export coming soon!'); }
+function exportWebsite(){
+  if(anchors.length === 0){ alert('Place at least one marker first.'); return; }
+  showExportOverlay();
+}
+
+function showExportOverlay(){
+  const existing = document.getElementById('export-overlay');
+  if(existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'export-overlay';
+  // 1. 배경 완전 투명
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:transparent;display:flex;align-items:center;justify-content:center;';
+  // 5. 캔버스 밖(overlay) 클릭 시 닫힘
+  overlay.addEventListener('click', function(e){
+    if(e.target === overlay) overlay.remove();
+  });
+
+  const canvasEl = document.createElement('canvas');
+  canvasEl.id = 'export-canvas';
+  canvasEl.style.cssText = 'display:block;cursor:grab;';
+  overlay.appendChild(canvasEl);
+  document.body.appendChild(overlay);
+  initExportScene(canvasEl);
+}
+
+
+function initExportScene(canvasEl){
+  const cols=[], rows=[];
+  anchors.forEach(function(a){ cols.push(a.col); rows.push(a.row); });
+  Object.values(revealedCells).forEach(function(c){ cols.push(c.col); rows.push(c.row); });
+  if(!cols.length) return;
+
+  const minCol=Math.min.apply(null,cols), maxCol=Math.max.apply(null,cols);
+  const minRow=Math.min.apply(null,rows), maxRow=Math.max.apply(null,rows);
+  const colSpan=maxCol-minCol+3, rowSpan=maxRow-minRow+3;
+
+  const W2=window.innerWidth, H2=window.innerHeight;
+  canvasEl.width=W2; canvasEl.height=H2;
+
+  const expRenderer=new THREE.WebGLRenderer({canvas:canvasEl,antialias:true,alpha:true});
+  expRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  expRenderer.setSize(W2,H2);
+  expRenderer.setClearColor(0x000000,0); // 1. 완전 투명 배경
+
+  const expScene=new THREE.Scene();
+  expScene.add(new THREE.AmbientLight(0xffffff,1.0));
+
+  const expCamera=new THREE.PerspectiveCamera(50,W2/H2,0.1,2000);
+
+  // 2. 타일 크기 2배 이상
+  const TILE=5;
+  // 3. 레이어 간격 줄임
+  const GAP=12;
+
+  function pos(col,row){
+    return {
+      x:(col-minCol-colSpan/2+1)*TILE,
+      z:(row-minRow-rowSpan/2+1)*TILE,
+    };
+  }
+
+  // 마커별 심볼 이미지 맵 (4. 모든 마커 심볼 반영)
+  const markerSymbolMap={};
+  anchors.forEach(function(a){
+    const type=a.type.replace('-A','').replace('-B','');
+    if(!markerSymbolMap[type]){
+      const m=cmsMarkings.find(function(x){ return x.marker_type===type && x.env_main===P_ENV_MAIN; });
+      if(m && m.symbol_img) markerSymbolMap[type]=m.symbol_img;
+      else if(selectedMarkingData && selectedMarkingData.marker_type===type && selectedMarkingData.symbol_img)
+        markerSymbolMap[type]=selectedMarkingData.symbol_img;
+    }
+  });
+
+  // ── LAYER 0: IMAGE (y=-GAP) ──
+  Object.values(revealedCells).forEach(function(cell){
+    const p=pos(cell.col,cell.row);
+    const cv2=cell.mesh.material.map && cell.mesh.material.map.image;
+    let tex;
+    if(cv2 && cv2.tagName==='CANVAS'){
+      tex=new THREE.CanvasTexture(cv2);
+    } else {
+      const cv=document.createElement('canvas'); cv.width=cv.height=64;
+      const ctx=cv.getContext('2d');
+      const l=cell.colorLight,d=cell.colorDark;
+      const g=ctx.createRadialGradient(32,32,2,32,32,36);
+      g.addColorStop(0,'rgb('+((l>>16)&255)+','+((l>>8)&255)+','+(l&255)+')');
+      g.addColorStop(1,'rgb('+((d>>16)&255)+','+((d>>8)&255)+','+(d&255)+')');
+      ctx.fillStyle=g; ctx.fillRect(0,0,64,64);
+      tex=new THREE.CanvasTexture(cv);
+    }
+    const geo=new THREE.BoxGeometry(TILE, TILE, 0.4)
+;
+    const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:0.92,side:THREE.DoubleSide}));
+    mesh.rotation.x=-Math.PI/2; mesh.position.set(p.x,-GAP,p.z);
+    expScene.add(mesh);
+    const el=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0xcccccc,transparent:true,opacity:0.3}));
+    el.rotation.x=-Math.PI/2; el.position.set(p.x,-GAP+0.01,p.z);
+    expScene.add(el);
+  });
+
+  // ── LAYER 1: MARKER (y=0) ──
+  Object.values(revealedCells).forEach(function(cell){
+    const p=pos(cell.col,cell.row);
+    const geo=new THREE.PlaneGeometry(TILE, TILE, 0.4);
+    const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xf8f8f8,transparent:true,opacity:0.12,side:THREE.DoubleSide}));
+    mesh.rotation.x=-Math.PI/2; mesh.position.set(p.x,0,p.z);
+    expScene.add(mesh);
+    const el=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0xdddddd,transparent:true,opacity:0.25}));
+    el.rotation.x=-Math.PI/2; el.position.set(p.x,0.01,p.z);
+    expScene.add(el);
+  });
+
+  anchors.forEach(function(a){
+    const p=pos(a.col,a.row);
+    const type=a.type.replace('-A','').replace('-B','');
+    const C=TYPE_CONFIG[type]||TYPE_CONFIG.CROSS;
+    const symUrl=markerSymbolMap[type]||'';
+
+    if(symUrl){
+      // 4. 심볼 이미지로 마커 표시
+      new THREE.TextureLoader().load(symUrl,function(tex){
+        const sGeo=new THREE.PlaneGeometry(TILE*0.8,TILE*0.8);
+        const sMesh=new THREE.Mesh(sGeo,new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}));
+        sMesh.rotation.x=-Math.PI/2; sMesh.position.set(p.x,0.03,p.z);
+        expScene.add(sMesh);
+      });
+    } else {
+      // 심볼 없으면 색상 원
+      const cGeo=new THREE.CircleGeometry(TILE*0.3,16);
+      const cMesh=new THREE.Mesh(cGeo,new THREE.MeshBasicMaterial({color:C.obj,transparent:true,opacity:0.85,side:THREE.DoubleSide}));
+      cMesh.rotation.x=-Math.PI/2; cMesh.position.set(p.x,0.02,p.z);
+      expScene.add(cMesh);
+    }
+  });
+
+  // ── LAYER 2: LINE (y=+GAP) ──
+  Object.values(revealedCells).forEach(function(cell){
+    const p=pos(cell.col,cell.row);
+    const geo=new THREE.PlaneGeometry(TILE,TILE);
+    const mesh=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.06,side:THREE.DoubleSide}));
+    mesh.rotation.x=-Math.PI/2; mesh.position.set(p.x,GAP,p.z);
+    expScene.add(mesh);
+    const el=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0xdddddd,transparent:true,opacity:0.18}));
+    el.rotation.x=-Math.PI/2; el.position.set(p.x,GAP+0.01,p.z);
+    expScene.add(el);
+  });
+
+  // 연결선
+  const placed=anchors.filter(function(a){ return !a.type.endsWith('-A'); });
+  for(var i=1;i<placed.length;i++){
+    const pa=pos(placed[i-1].col,placed[i-1].row);
+    const pb=pos(placed[i].col,placed[i].row);
+    const pts=[new THREE.Vector3(pa.x,GAP+0.02,pa.z),new THREE.Vector3(pb.x,GAP+0.02,pb.z)];
+    expScene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x111111,transparent:true,opacity:0.7})));
+  }
+  // 양끝 동그라미
+  [placed[0],placed[placed.length-1]].filter(Boolean).forEach(function(a){
+    const p=pos(a.col,a.row);
+    const cMesh=new THREE.Mesh(new THREE.CircleGeometry(TILE*0.15,16),new THREE.MeshBasicMaterial({color:0x111111,side:THREE.DoubleSide}));
+    cMesh.rotation.x=-Math.PI/2; cMesh.position.set(p.x,GAP+0.03,p.z);
+    expScene.add(cMesh);
+  });
+
+  // ── 카메라 컨트롤 ──
+  let isDragging=false,prevX=0,prevY=0;
+  let theta=0.6,phi=0.85,radius=Math.max(colSpan,rowSpan)*TILE*1.8;
+  const target=new THREE.Vector3(0,0,0);
+
+  function updateCam(){
+    expCamera.position.x=target.x+radius*Math.sin(phi)*Math.sin(theta);
+    expCamera.position.y=target.y+radius*Math.cos(phi);
+    expCamera.position.z=target.z+radius*Math.sin(phi)*Math.cos(theta);
+    expCamera.lookAt(target);
+  }
+  updateCam();
+
+  canvasEl.addEventListener('mousedown',function(e){isDragging=true;prevX=e.clientX;prevY=e.clientY;canvasEl.style.cursor='grabbing';});
+  window.addEventListener('mouseup',function(){isDragging=false;canvasEl.style.cursor='grab';});
+  window.addEventListener('mousemove',function(e){
+    if(!isDragging)return;
+    theta-=(e.clientX-prevX)*0.008;
+    phi=Math.max(0.15,Math.min(Math.PI-0.15,phi+(e.clientY-prevY)*0.008));
+    prevX=e.clientX;prevY=e.clientY;
+    updateCam();
+  });
+  // 5. 줌
+  canvasEl.addEventListener('wheel',function(e){
+    e.stopPropagation();
+    radius=Math.max(TILE*3,Math.min(500,radius+e.deltaY*0.15));
+    updateCam();
+  },{passive:true});
+
+  function expAnimate(){
+    if(!document.getElementById('export-overlay')){expRenderer.dispose();return;}
+    requestAnimationFrame(expAnimate);
+    expRenderer.render(expScene,expCamera);
+  }
+  expAnimate();
+}
+
 
 // ── BOOT ──
 async function boot(){
