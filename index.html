@@ -1,12 +1,625 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WORLD</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MARKING SYSTEM</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Libertinus+Mono&display=swap');
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      background: #fff;
+      font-family: "Libertinus Mono", monospace;
+      color: #111;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ROW ── */
+    #header {
+      display: flex;
+      flex-shrink: 0;
+      /*border-bottom: 1px solid #d0d0d0;*/
+    }
+    .header-cell {
+      padding: 10px 20px;
+      font-size: 12px;
+      color: #111;
+      text-decoration: underline;
+      text-decoration-thickness: 0.5px;
+      text-underline-offset: 0.5px;
+      /*border-right: 1px solid #d0d0d0;*/
+    }
+    .header-cell:last-child { border-right: none; }
+
+    #h-env   { width: 500px; flex-shrink: 0; padding: 10px 24px; }
+    #h-prev  { width: 224px; flex-shrink: 0; }
+    #h-mark  { width: 200px; flex-shrink: 0; }
+    #h-proc  { width: 220px; flex-shrink: 0; }
+
+    /* ── MAIN ROW ── */
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* vertical dividers */
+    .col {
+      /*border-right: 1px solid #d0d0d0;*/
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .col:last-child { border-right: none; }
+
+    /* ── COL 1: ENVIRONMENT INDEX ── */
+    #col-env {
+      width: 500px;
+      flex-shrink: 0;
+      padding: 20px 20px 20px 24px;
+      overflow-y: auto;
+    }
+    .env-names {
+      font-size: clamp(26px, 3vw, 46px);
+      line-height: 1.15;
+    }
+    .env-name {
+      cursor: pointer;
+      display: inline;
+      text-decoration: underline;
+      text-decoration-thickness: 1.5px;
+      text-underline-offset: 4px;
+      transition: color 0.12s, text-decoration-color 0.12s;
+      color: #111;
+      text-decoration-color: #111;
+    }
+    .env-name.active  { color: #000; text-decoration-color: #000; }
+    .env-name.inactive{ color: #ccc; text-decoration-color: #ccc; }
+
+    /* ── COL 2: PREVIEW ── */
+    #col-prev {
+      width: 224px;
+      flex-shrink: 0;
+      padding: 16px 16px 16px 16px;
+      overflow-y: auto;
+      gap: 14px;
+      display: flex;
+      flex-direction: column;
+    }
+    .preview-item {
+      display: flex;
+      flex-direction: column;
+      width: 192px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .preview-item.disabled {
+      opacity: 0.25;
+      pointer-events: none;
+    }
+    .preview-item.selected .preview-sub-label {
+      background: #111;
+      color: #fff;
+    }
+    .preview-sub-label {
+      font-size: 8px;
+      color: #111;
+      letter-spacing: 0.1em;
+      background: #ebebeb;
+      padding: 3px 7px;
+      width: 192px;
+      transition: background 0.12s, color 0.12s;
+    }
+    .preview-img {
+      width: 192px;
+      height: 75px;
+      object-fit: cover;
+      display: block;
+      background: #e0e0e0;
+    }
+    .preview-img-ph {
+      width: 192px;
+      height: 75px;
+      background: #ebebeb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      color: #bbb;
+      letter-spacing: 0.08em;
+    }
+    #preview-hint {
+      font-size: 10px;
+      color: #ccc;
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+
+    /* ── COL 3: MARKERS ── */
+    #col-mark {
+      width: 200px;
+      flex-shrink: 0;
+      padding: 16px 12px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .marking-icon-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 3px 4px;
+      transition: background 0.1s;
+      border: 1px solid transparent;
+    }
+    .marking-icon-row:hover:not(.disabled-marker) { background: #f4f4f4; }
+    .marking-icon-row.selected-marker { border-color: #111; }
+    .marking-icon-row.disabled-marker {
+      opacity: 0.2;
+      pointer-events: none;
+    }
+    .mi-thumb {
+      width: 36px; height: 36px;
+      border: 1px solid #e0e0e0;
+      background: #f8f8f8;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .mi-thumb img { width: 26px; height: 26px; object-fit: contain; }
+    .mi-thumb-ph { font-size: 6px; color: #ccc; text-align: center; letter-spacing: 0.03em; line-height: 1.3; }
+    .marking-icon-row.selected-marker .mi-thumb { background: #111; border-color: #111; }
+    .marking-icon-row.selected-marker .mi-thumb-ph { color: #fff; }
+    .mi-name {
+      font-size: 8px;
+      color: #555;
+      letter-spacing: 0.04em;
+      line-height: 1.3;
+    }
+    .marking-icon-row.selected-marker .mi-name { color: #111; }
+    #markers-hint {
+      font-size: 10px;
+      color: #ccc;
+      letter-spacing: 0.08em;
+      line-height: 1.7;
+    }
+
+    /* ── COL 4: PROCEED ── */
+    #col-proc {
+      width: 220px;
+      flex-shrink: 0;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    #proceed-guide {
+      font-size: 10px;
+      color: #bbb;
+      letter-spacing: 0.04em;
+      line-height: 1.7;
+      margin-bottom: 14px;
+    }
+
+    /* 심볼 그래픽 div */
+    #symbol-box {
+      width: 100%;
+      aspect-ratio: 1;
+      background: #ebebeb;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    #symbol-box img {
+      width: 80%;
+      height: 80%;
+      object-fit: contain;
+    }
+    #symbol-box .sym-ph {
+      font-size: 8px;
+      color: #bbb;
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+
+    /* 선택된 마킹 정보 */
+    #sel-info {
+      font-size: 9px;
+      color: #333;
+      letter-spacing: 0.04em;
+      line-height: 1.8;
+      margin-bottom: 14px;
+    }
+    #sel-info .sel-name { font-size: 11px; color: #111; display: block; margin-bottom: 2px; }
+    #sel-info .sel-role { font-size: 8px; color: #aaa; letter-spacing: 0.12em; }
+
+    /* proceed button */
+    #proceed-btn {
+      width: 28px; height: 28px;
+      border: 1.5px solid #ccc;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      cursor: not-allowed;
+      transition: all 0.18s;
+      text-decoration: none;
+      margin-top: auto;
+    }
+    #proceed-btn.active { border-color: #111; background: #111; cursor: pointer; }
+    #proceed-btn .arrow-line { stroke: #ccc; transition: stroke 0.18s; }
+    #proceed-btn.active .arrow-line { stroke: #fff; }
+
+        /* copyright */
+    #col-copyright {
+      font-size: 14px;
+      color: #141414;
+      letter-spacing: 0.04em;
+      line-height: 1.7;
+      padding: 20px 20px 10px 24px;
+      text-align: left;
+      align-items: left;
+    }
+
+
+    /* ── BOTTOM BG ── */
+    #bottom-bg {
+      height: 130px;
+      flex-shrink: 0;
+      overflow: hidden;
+      background: #ebebeb;
+      border-top: 1px solid #d0d0d0;
+    }
+    #bottom-bg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #bottom-bg .bg-ph { width: 100%; height: 100%; background: #ebebeb; }
+
+    /* tooltip */
+    #tooltip {
+      position: fixed;
+      background: #fff;
+      border: 1px solid #ddd;
+      padding: 9px 11px;
+      font-size: 8px;
+      color: #555;
+      line-height: 1.8;
+      max-width: 190px;
+      pointer-events: none;
+      z-index: 200;
+      display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      letter-spacing: 0.05em;
+    }
+    #tooltip .tt-name { font-size: 10px; color: #111; margin-bottom: 3px; }
+    #tooltip .tt-role { font-size: 7px; color: #aaa; letter-spacing: 0.12em; }
+
+    ::-webkit-scrollbar { width: 2px; }
+    ::-webkit-scrollbar-thumb { background: #ddd; }
+  </style>
 </head>
 <body>
-    <h1>WORLD</h1>
-    <h3>world</h3>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="header-cell" id="h-env">Environment — Index</div>
+  <div class="header-cell" id="h-prev">Preview</div>
+  <div class="header-cell" id="h-mark">Markers</div>
+  <div class="header-cell" id="h-proc">Proceed</div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- COL 1: ENV -->
+  <div class="col" id="col-env">
+    <div class="env-names" id="env-names"></div>
+  </div>
+
+  <!-- COL 2: PREVIEW -->
+  <div class="col" id="col-prev">
+    <div id="preview-hint">Select an environment.</div>
+  </div>
+
+  <!-- COL 3: MARKERS -->
+  <div class="col" id="col-mark">
+    <div id="markers-hint">—</div>
+  </div>
+
+  <!-- COL 4: PROCEED -->
+  <div class="col" id="col-proc">
+    <div id="proceed-guide">Choose Your<br>marker<br>to Proceed.</div>
+    <div id="symbol-box">
+      <div class="sym-ph">fig.</div>
+    </div>
+    <div id="sel-info"></div>
+  </div>
+
+  <div>
+    <div id="sel-info"></div>
+    <a id="proceed-btn" href="#">
+      <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+        <line class="arrow-line" x1="2" y1="9" x2="15" y2="9" stroke-width="1.5"/>
+        <polyline class="arrow-line" points="10,4 15,9 10,14" stroke-width="1.5" fill="none"/>
+      </svg>
+    </a>
+  </div>
+
+</div>
+
+<div class="col" id="col-copyright">© 2026, Kim Younjae, all rights reserved</div> 
+
+<!-- BOTTOM BG -->
+<div id="bottom-bg"><div class="bg-ph"></div></div>
+
+<!-- TOOLTIP -->
+<div id="tooltip">
+  <div class="tt-name" id="tt-name"></div>
+  <div class="tt-role" id="tt-role"></div>
+  <div id="tt-desc"></div>
+</div>
+
+<script>
+const SHEET_CSV_URL  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTON2Qa5hkrL3ptGGKrwGqtZew1QPZJwrSM7vcrVkgoNDx6YL2zrNE62pwq3P_3HexSbKjw9GSvdlix/pub?gid=1413106417&single=true&output=csv';
+const MAPS_API_KEY   = 'AIzaSyBai5eeiJEuQdCdDgE4uMBfgcHzax39GBQ';
+const INFINITE_FLOOR_URL = 'infinite-floor.html';
+
+const ENVIRONMENTS = [
+  { id:'mountain',    label:'Mountain',                env_main:'산지' },
+  { id:'underwater',  label:'Underwater,',             env_main:'수중' },
+  { id:'operation',   label:'Operation Way,',          env_main:'운항로' },
+  { id:'digital',     label:'Digital Space,',          env_main:'디지털환경' },
+  { id:'distinctive', label:'Distinctive Environment', env_main:'특수환경' },
+  { id:'city',        label:'City Road,',              env_main:'도시' },
+  { id:'industry',    label:'Industry,',               env_main:'산업환경' },
+  { id:'space',       label:'Space',                   env_main:'우주' },
+];
+
+const SUB_EN = {
+  '산지':'Mountain','등산로':'Hiking Trail','수중':'Underwater',
+  '활주로':'Waterway','항로':'Airway','디지털 환경':'Digital Space',
+  '게임':'Game','마을':'Village','툰드라':'Tundra','접경지':'Border Zone',
+  '도로':'Road','보행로':'Pedestrian Path','하수도':'Sewer',
+  '농지':'Farmland','물류':'Logistics','우주':'Space','화성':'Mars',
+};
+
+let cmsMarkings   = [];
+let activeEnvId   = null;   // 선택된 대환경
+let activeSubEnv  = null;   // 선택된 세부환경
+let selectedMarkId= null;   // 선택된 마킹
+
+// ── INIT ──
+async function init() {
+  renderEnvList();
+  await loadCMS();
+}
+
+function renderEnvList() {
+  document.getElementById('env-names').innerHTML = ENVIRONMENTS.map(env =>
+    `<span class="env-name" data-env="${env.id}" onclick="clickEnv('${env.id}')">${env.label}</span>`
+  ).join('<br>');
+}
+
+// ── CMS ──
+async function loadCMS() {
+  if (!SHEET_CSV_URL) return;
+  try {
+    const res  = await fetch(SHEET_CSV_URL);
+    const text = await res.text();
+    const lines = text.split('\n').filter(l => l.trim());
+    const delim = lines[0].includes('\t') ? '\t' : ',';
+    const hdrs  = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g,''));
+    cmsMarkings = lines.slice(1).filter(l=>l.trim()).map(line => {
+      const cols = delim==='\t' ? line.split('\t') : parseCsv(line);
+      const obj  = {};
+      hdrs.forEach((h,i) => obj[h] = (cols[i]||'').trim().replace(/^"|"$/g,''));
+      return obj;
+    }).filter(m => m.id);
+    console.log(`Loaded ${cmsMarkings.length} markings`);
+  } catch(e) { console.warn('CMS failed:', e); }
+}
+
+function parseCsv(line) {
+  const r=[]; let c='', q=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"') q=!q;
+    else if(line[i]===',' && !q){r.push(c);c='';}
+    else c+=line[i];
+  }
+  r.push(c); return r;
+}
+
+// ── ENV CLICK ──
+function clickEnv(envId) {
+  activeEnvId  = envId;
+  activeSubEnv = null;
+  selectedMarkId = null;
+
+  document.querySelectorAll('.env-name').forEach(el => {
+    el.classList.toggle('active',   el.dataset.env === envId);
+    el.classList.toggle('inactive', el.dataset.env !== envId);
+  });
+
+  const env = ENVIRONMENTS.find(e => e.id === envId);
+  renderPreviews(env);
+  renderMarkers(null); // 마커 열 비워두기 (아무 sub 선택 전)
+  resetProceed();
+  updateBg(env);
+}
+
+// ── PREVIEW COL ──
+function renderPreviews(env) {
+  const col = document.getElementById('col-prev');
+  const markingsInEnv = cmsMarkings.filter(m => m.env_main === env.env_main);
+  const subEnvs = [...new Set(markingsInEnv.map(m => m.env_sub))];
+
+  if (subEnvs.length === 0) {
+    col.innerHTML = `<div id="preview-hint">No data for this environment.</div>`;
+    return;
+  }
+
+  col.innerHTML = subEnvs.map(sub => {
+    const rep    = markingsInEnv.find(m => m.env_sub === sub);
+    const bgUrl  = getSatUrl(rep, -2);
+    const labelEn= SUB_EN[sub] || sub;
+    return `
+      <div class="preview-item" data-sub="${sub}" onclick="clickSubEnv('${env.id}','${sub}')">
+        <div class="preview-sub-label">${labelEn}</div>
+        ${bgUrl
+          ? `<img class="preview-img" src="${bgUrl}" alt="${labelEn}"/>`
+          : `<div class="preview-img-ph">${labelEn}</div>`}
+      </div>`;
+  }).join('');
+}
+
+// ── SUB-ENV CLICK ──
+function clickSubEnv(envId, sub) {
+  activeSubEnv = sub;
+  selectedMarkId = null;
+
+  // preview items: 선택된 것만 active, 나머지 disabled
+  document.querySelectorAll('.preview-item').forEach(el => {
+    const isSel = el.dataset.sub === sub;
+    el.classList.toggle('selected',  isSel);
+    el.classList.toggle('disabled',  !isSel);
+  });
+
+  const env = ENVIRONMENTS.find(e => e.id === envId);
+  renderMarkers(sub, env);
+  resetProceed();
+}
+
+// ── MARKERS COL ──
+function makeMarkerRow(m, disabled) {
+  const thumbHtml = m.symbol_img
+    ? '<img src="' + m.symbol_img + '" alt="' + m.name_en + '"/>'
+    : '<div class="mi-thumb-ph">' + (m.name_en||'').split(' ').slice(0,2).join(' ') + '</div>';
+  const disabledAttr = disabled ? 'style="pointer-events:none;opacity:0.2"' : '';
+  const clickAttr    = disabled ? '' : 'onclick="selectMarking(\'' + m.id + '\',\'' + (activeEnvId||'') + '\')"';
+  const hoverAttr    = disabled ? '' : 'onmouseenter="showTooltip(event,\'' + m.id + '\')" onmouseleave="hideTooltip()"';
+  const cls = 'marking-icon-row' + (disabled ? ' disabled-marker' : '');
+  return '<div class="' + cls + '" data-id="' + m.id + '" ' + clickAttr + ' ' + hoverAttr + ' ' + disabledAttr + '>'
+    + '<div class="mi-thumb">' + thumbHtml + '</div>'
+    + '<div class="mi-name">' + m.name_en + '</div>'
+    + '</div>';
+}
+
+function renderMarkers(sub, env) {
+  const col = document.getElementById('col-mark');
+
+  if (!sub) {
+    col.innerHTML = '<div id="markers-hint">Select a preview to see markers.</div>';
+    return;
+  }
+
+  const all = env
+    ? cmsMarkings.filter(function(m){ return m.env_main === env.env_main; })
+    : cmsMarkings;
+  const subMarkings   = all.filter(function(m){ return m.env_sub === sub; });
+  const otherMarkings = all.filter(function(m){ return m.env_sub !== sub; });
+
+  var html = subMarkings.map(function(m){ return makeMarkerRow(m, false); }).join('');
+  if (otherMarkings.length > 0) {
+    html += '<div style="height:1px;background:#e8e8e8;margin:6px 0;"></div>';
+    html += otherMarkings.map(function(m){ return makeMarkerRow(m, true); }).join('');
+  }
+  col.innerHTML = html;
+}
+
+// ── SELECT MARKING ──
+function selectMarking(markingId, envId) {
+  selectedMarkId = markingId;
+  const m = cmsMarkings.find(x => x.id === markingId);
+  if (!m) return;
+
+  document.querySelectorAll('.marking-icon-row').forEach(el =>
+    el.classList.toggle('selected-marker', el.dataset.id === markingId));
+
+  // proceed col
+  const symBox = document.getElementById('symbol-box');
+  if (m.symbol_img) {
+    symBox.innerHTML = `<img src="${m.symbol_img}" alt="${m.name_en}"/>`;
+  } else {
+    symBox.innerHTML = `<div class="sym-ph">fig.</div>`;
+  }
+
+  document.getElementById('sel-info').innerHTML =
+    `<span class="sel-name">${m.name_en}</span>
+     <span class="sel-role">${m.marker_type} &nbsp;·&nbsp; ${m.spatial_role}</span>`;
+
+  const btn = document.getElementById('proceed-btn');
+  btn.classList.add('active');
+  const p = new URLSearchParams({
+    env: envId, marker: markingId,
+    type: m.marker_type || 'CROSS',
+    env_main: m.env_main || '',
+    env_sub:  m.env_sub  || '',
+    name: m.name_en || markingId,
+  });
+  btn.href = `${INFINITE_FLOOR_URL}?${p.toString()}`;
+}
+
+function resetProceed() {
+  document.getElementById('symbol-box').innerHTML = `<div class="sym-ph">fig.</div>`;
+  document.getElementById('sel-info').innerHTML = '';
+  const btn = document.getElementById('proceed-btn');
+  btn.classList.remove('active');
+  btn.href = '#';
+}
+
+// ── BG ──
+function updateBg(env) {
+  const container = document.getElementById('bottom-bg');
+  const m = cmsMarkings.find(x => x.env_main === env.env_main && x.env_bg_img);
+  if (m?.env_bg_img) {
+    container.innerHTML = `<img src="${m.env_bg_img}" alt="${env.label}"/>`;
+    return;
+  }
+  const first = cmsMarkings.find(x => x.env_main === env.env_main);
+  if (first?.lat && MAPS_API_KEY) {
+    const z = Math.max(1,(parseInt(first.zoom)||14)-3);
+    container.innerHTML = `<img src="https://maps.googleapis.com/maps/api/staticmap?center=${first.lat},${first.lng}&zoom=${z}&size=1400x300&maptype=satellite&key=${MAPS_API_KEY}" alt="${env.label}"/>`;
+  } else {
+    container.innerHTML = `<div class="bg-ph"></div>`;
+  }
+}
+
+function getSatUrl(m, zoomOffset=0) {
+  if (!m || !MAPS_API_KEY) return '';
+  if (!m.lat || !m.lng) return '';
+  const z = Math.max(1,(parseInt(m.zoom)||14)+zoomOffset);
+  return `https://maps.googleapis.com/maps/api/staticmap?center=${m.lat},${m.lng}&zoom=${z}&size=400x200&maptype=satellite&key=${MAPS_API_KEY}`;
+}
+
+// ── TOOLTIP ──
+function showTooltip(e, id) {
+  const m = cmsMarkings.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('tt-name').textContent = m.name_en;
+  document.getElementById('tt-role').textContent = `${m.marker_type} · ${m.spatial_role}`;
+  document.getElementById('tt-desc').textContent = m.description_en || '';
+  const tt = document.getElementById('tooltip');
+  tt.style.display = 'block';
+  moveTT(e);
+}
+function moveTT(e) {
+  const tt = document.getElementById('tooltip');
+  tt.style.left = Math.min(e.clientX+14, window.innerWidth-200)+'px';
+  tt.style.top  = Math.max(8, e.clientY-10)+'px';
+}
+function hideTooltip() { document.getElementById('tooltip').style.display='none'; }
+document.addEventListener('mousemove', e => {
+  if(document.getElementById('tooltip').style.display==='block') moveTT(e);
+});
+
+init();
+</script>
 </body>
 </html>

@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Field Marking</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Libertinus+Mono&display=swap');
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: #fff;
+      font-family: 'Share Tech Mono', monospace;
+      color: #222;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* ── LEFT PANEL ── */
+    #left-panel {
+      width: 240px;
+      min-width: 220px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #e8e8e8;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .lp-header {
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid #eeeeee;
+      flex-shrink: 0;
+    }
+    .lp-title {
+      font-size: 16px;
+      color: #111;
+      margin-bottom: 9px;
+      font-family: "Libertinus Mono", monospace;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+    .lp-status { display: flex; align-items: center; gap: 5px; }
+    .lp-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%; background: #2a2;
+      animation: blink 2.5s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    .lp-status-text { font-size: 8px; color: #2a2; letter-spacing: 0.15em; }
+
+    .lp-section { padding: 12px 18px; border-bottom: 1px solid #eeeeee; flex-shrink: 0; }
+    .lp-section-title { font-size: 9px; color: #111; letter-spacing: 0.12em; margin-bottom: 6px; }
+    .lp-env-name { font-size: 8px; color: #888; letter-spacing: 0.1em; margin-bottom: 8px; }
+
+    #si-bg {
+      width: 100%; height: 60px;
+      object-fit: cover; display: block;
+      background: #f4f4f4; margin-bottom: 8px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 0;
+    }
+    .stat-item { display: flex; flex-direction: column; gap: 2px; }
+    .stat-label { font-size: 6px; color: #bbb; letter-spacing: 0.18em; }
+    .stat-value { font-size: 12px; color: #333; letter-spacing: 0.04em; }
+    .stat-value.hl { color: #3a6aaa; }
+
+    /* marker index table */
+    .lp-table-wrap { flex-shrink: 0; border-bottom: 1px solid #eeeeee; }
+    .lp-table-title {
+      padding: 8px 18px 5px;
+      font-size: 8px; color: #bbb; letter-spacing: 0.2em;
+    }
+    .mi-table { width: 100%; border-collapse: collapse; }
+    .mi-th {
+      padding: 3px 6px 3px 1px;
+      font-size: 6px; color: #bbb; letter-spacing: 0.18em;
+      text-align: center; font-weight: normal;
+      border-bottom: 1px solid #f0f0f0; background: #fff;
+    }
+    .mi-th:first-child { padding-left: 18px; }
+    .mi-td {
+      padding: 4px 6px 4px 18px;
+      font-size: 8px; color: #555; vertical-align: middle;
+    }
+    .mi-td:first-child { padding-left: 18px; }
+    .mi-row { border-bottom: 1px solid #f8f8f8; }
+    .mi-row:hover { background: #fafafa; cursor:pointer; }
+    .type-chip { font-size: 6px; padding: 1px 4px; color: #fff; letter-spacing: 0.08em; }
+    #mi-tbody { max-height: 100px; overflow-y: auto; display: block; }
+    #mi-tbody tr { display: table; width: 100%; table-layout: fixed; }
+
+    /* ── MARKER LIST (replaces type buttons) ── */
+    #marker-list-section {
+      flex-shrink: 0;
+      border-bottom: 1px solid #eeeeee;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-height: 180px;
+    }
+    .ml-title {
+      padding: 8px 18px 5px;
+      font-size: 8px; color: #bbb; letter-spacing: 0.2em;
+      flex-shrink: 0;
+    }
+    #marker-list {
+      overflow-y: auto;
+      padding: 4px 0;
+      flex: 1;
+    }
+    .ml-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 18px;
+      cursor: pointer;
+      transition: background 0.1s;
+      border-left: 2px solid transparent;
+    }
+    .ml-row:hover { background: #f8f8f8; }
+    .ml-row.active {
+      background: #eef4ff;
+      border-left-color: #3a6aaa;
+    }
+    .ml-thumb {
+      width: 28px; height: 28px;
+      border: 1px solid #e0e0e0;
+      background: #f8f8f8;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .ml-thumb img { width: 22px; height: 22px; object-fit: contain; }
+    .ml-thumb-ph { font-size: 5px; color: #ccc; text-align: center; letter-spacing: 0.02em; }
+    .ml-row.active .ml-thumb { background: #111; border-color: #111; }
+    .ml-row.active .ml-thumb-ph { color: #fff; }
+    .ml-info { flex: 1; min-width: 0; }
+    .ml-name { font-size: 8px; color: #444; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ml-type { font-size: 6px; color: #bbb; letter-spacing: 0.1em; margin-top: 1px; }
+    .ml-row.active .ml-name { color: #111; }
+    .ml-row.active .ml-type { color: #3a6aaa; }
+
+    /* ── CURRENT MARKING ── */
+    #current-marking-section {
+      flex: 1;
+      padding: 10px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+    .cm-title { font-size: 8px; color: #bbb; letter-spacing: 0.2em; flex-shrink: 0; }
+    .cm-content { display: flex; gap: 8px; align-items: flex-start; }
+    .cm-symbol {
+      width: 38px; height: 38px;
+      border: 1px solid #e0e0e0; background: #f8f8f8;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .cm-symbol img { width: 28px; height: 28px; object-fit: contain; }
+    .cm-symbol .cm-ph { font-size: 6px; color: #ccc; text-align: center; letter-spacing: 0.04em; }
+    .cm-info { flex: 1; min-width: 0; }
+    .cm-name { font-size: 10px; color: #333; letter-spacing: 0.04em; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cm-type { font-size: 7px; color: #aaa; letter-spacing: 0.1em; }
+    .cm-desc { font-size: 7px; color: #aaa; letter-spacing: 0.04em; line-height: 1.6; margin-top: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+
+    /* ── CENTER ── */
+    #center {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      padding: 24px;
+      position: relative;
+      min-width: 0;
+    }
+    #canvas-box {
+      width: 100%; height: 100%;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      background: #f2f2f2;
+    }
+    #canvas-box canvas {
+      width: 100% !important; height: 100% !important;
+      display: block; border-radius: 20px;
+    }
+    #place-info {
+      position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+      font-size: 9px; color: #aaa; letter-spacing: 0.08em;
+      pointer-events: none; background: rgba(255,255,255,0.9);
+      padding: 3px 12px; border-radius: 20px; white-space: nowrap;
+    }
+    #view-hint {
+      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+      font-size: 9px; color: #ccc; letter-spacing: 0.1em; pointer-events: none;
+    }
+
+    #top-right {
+      position: absolute; top: 24px; right: 24px;
+      display: flex; align-items: center; gap: 10px; z-index: 10;
+    }
+    #export-btn {
+      padding: 6px 16px; background: #fff; border: 1px solid #e0e0e0;
+      color: #888; font-family: 'Share Tech Mono', monospace;
+      font-size: 8px; letter-spacing: 0.15em; cursor: pointer;
+      transition: all 0.15s; text-decoration: none; display: block;
+    }
+    #export-btn:hover { border-color: #aaa; color: #444; }
+    #return-btn {
+      font-size: 9px; color: #bbb; letter-spacing: 0.1em;
+      text-decoration: none; cursor: pointer; transition: color 0.15s;
+      background: none; border: none; font-family: 'Share Tech Mono', monospace;
+    }
+    #return-btn:hover { color: #555; }
+
+    /* image loading indicator */
+    .img-loading {
+      position: absolute; top: 4px; right: 4px;
+      width: 6px; height: 6px;
+      border-radius: 50%; background: #aac4ee;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* modals */
+    #direction-modal {
+      position: fixed; inset: 0; background: rgba(255,255,255,0.92);
+      z-index: 300; display: none;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+    }
+    #direction-modal.show { display: flex; }
+    .dir-label { font-size: 9px; color: #bbb; letter-spacing: 0.25em; }
+    .dir-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; width: 120px; }
+    .dir-btn {
+      padding: 10px; background: #fff; border: 1px solid #e0e0e0;
+      color: #888; font-family: 'Share Tech Mono', monospace;
+      font-size: 14px; cursor: pointer; text-align: center; transition: all 0.12s;
+    }
+    .dir-btn:hover { background: #f0f4ff; border-color: #aac4ee; color: #3a6aaa; }
+    .dir-center { background: #f8f8f8; cursor: default; color: #ddd; }
+    .mon-input {
+      width: 280px; padding: 10px 14px;
+      border: 1px solid #ccc; background: #fff;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px; color: #111; outline: none;
+    }
+    .mon-btn {
+      padding: 7px 20px; background: #fff; border: 1px solid #ddd;
+      color: #888; font-family: 'Share Tech Mono', monospace;
+      font-size: 8px; letter-spacing: 0.15em; cursor: pointer; transition: all 0.12s;
+    }
+    .mon-btn.ok { border-color: #aac4ee; color: #3a6aaa; }
+    .mon-btn.ok:hover { background: #eef4ff; }
+    .mon-btns { display: flex; gap: 8px; }
+
+    ::-webkit-scrollbar { width: 2px; }
+    ::-webkit-scrollbar-thumb { background: #e0e0e0; }
+  </style>
+</head>
+<body>
+
+<div id="left-panel">
+  <div class="lp-header">
+    <div class="lp-title">Field Marking</div>
+    <div class="lp-status">
+      <div class="lp-dot"></div>
+      <div class="lp-status-text">Crawling</div>
+    </div>
+  </div>
+
+  <div class="lp-section">
+    <div class="lp-section-title">Spatial Index</div>
+    <div class="lp-env-name" id="lp-env-name">—</div>
+    <img id="si-bg" src="" alt="" onerror="this.style.display='none'"/>
+    <div class="stats-row">
+      <div class="stat-item"><div class="stat-label">DEPTH</div><div class="stat-value hl" id="stat-depth">0.0</div></div>
+      <div class="stat-item"><div class="stat-label">MARKERS</div><div class="stat-value" id="stat-markers">0</div></div>
+      <div class="stat-item"><div class="stat-label">TIME</div><div class="stat-value" id="stat-time">00:00</div></div>
+      <div class="stat-item"><div class="stat-label">DISCOVERY</div><div class="stat-value" id="stat-discovery">0</div></div>
+    </div>
+  </div>
+
+  <div class="lp-table-wrap">
+    <div class="lp-table-title">Marker Index</div>
+    <table class="mi-table">
+      <thead><tr>
+        <th class="mi-th">ID</th>
+        <th class="mi-th">TYPE</th>
+        <th class="mi-th">DEPTH</th>
+        <th class="mi-th">CELLS</th>
+      </tr></thead>
+    </table>
+    <div style="overflow-y:auto;max-height:100px;">
+      <table class="mi-table"><tbody id="mi-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- MARKER LIST (replaces type buttons) -->
+  <div id="marker-list-section">
+    <div class="ml-title">Select Marking</div>
+    <div id="marker-list"></div>
+  </div>
+
+  <div id="current-marking-section">
+    <div class="cm-title">Active Marking</div>
+    <div class="cm-content">
+      <div class="cm-symbol" id="cm-symbol"><div class="cm-ph">—</div></div>
+      <div class="cm-info">
+        <div class="cm-name" id="cm-name">—</div>
+        <div class="cm-type" id="cm-type"></div>
+      </div>
+    </div>
+    <div class="cm-desc" id="cm-desc"></div>
+  </div>
+</div>
+
+<div id="center">
+  <div id="top-right">
+    <a href="index.html" id="return-btn">← Return</a>
+    <button id="export-btn" onclick="exportWebsite()">Export</button>
+  </div>
+  <div id="canvas-box">
+    <canvas id="c"></canvas>
+    <div id="place-info">SELECT CELL TO PLACE MARKING</div>
+    <div id="view-hint">SCROLL — NAVIGATE &nbsp;·&nbsp; CLICK — PLACE</div>
+  </div>
+</div>
+
+<div id="direction-modal">
+  <div class="dir-label">Select Direction</div>
+  <div class="dir-grid">
+    <div class="dir-btn dir-center"></div>
+    <div class="dir-btn" onclick="confirmDirection('N')">↑</div>
+    <div class="dir-btn dir-center"></div>
+    <div class="dir-btn" onclick="confirmDirection('W')">←</div>
+    <div class="dir-btn dir-center" style="font-size:8px;color:#ddd;">●</div>
+    <div class="dir-btn" onclick="confirmDirection('E')">→</div>
+    <div class="dir-btn dir-center"></div>
+    <div class="dir-btn" onclick="confirmDirection('S')">↓</div>
+    <div class="dir-btn dir-center"></div>
+  </div>
+  <button class="mon-btn" onclick="cancelModal()">Cancel</button>
+</div>
+
+<div id="monument-modal" style="position:fixed;inset:0;background:rgba(255,255,255,0.92);z-index:300;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div class="dir-label">Monument — Enter Text</div>
+  <input class="mon-input" id="mon-input" placeholder="Name or note" maxlength="60"/>
+  <div class="mon-btns">
+    <button class="mon-btn" onclick="cancelModal()">Cancel</button>
+    <button class="mon-btn ok" onclick="confirmMonument()">Place</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ── URL PARAMS ──
+const params    = new URLSearchParams(window.location.search);
+const P_ENV     = params.get('env') || '';
+const P_MARKER  = params.get('marker') || '';
+const P_TYPE    = params.get('type') || 'CROSS';
+const P_ENV_MAIN= params.get('env_main') || '';
+const P_ENV_SUB = params.get('env_sub') || '';
+const P_NAME    = params.get('name') || P_MARKER;
+
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTON2Qa5hkrL3ptGGKrwGqtZew1QPZJwrSM7vcrVkgoNDx6YL2zrNE62pwq3P_3HexSbKjw9GSvdlix/pub?gid=1413106417&single=true&output=csv';
+const MAPS_API_KEY  = 'AIzaSyBai5eeiJEuQdCdDgE4uMBfgcHzax39GBQ';
+
+// ── CMS ──
+let cmsMarkings = [];
+let selectedMarkingData = null;
+let envMarkings = []; // 현재 환경의 마킹 목록
+
+async function loadCMS() {
+  if (!SHEET_CSV_URL) return;
+  try {
+    const res = await fetch(SHEET_CSV_URL);
+    const text = await res.text();
+    const lines = text.split('\n').filter(l => l.trim());
+    const delim = lines[0].includes('\t') ? '\t' : ',';
+    const headers = lines[0].split(delim).map(h => h.trim().replace(/^"|"$/g,''));
+    cmsMarkings = lines.slice(1).map(line => {
+      const cols = delim==='\t' ? line.split('\t') : parseCsvLine(line);
+      const obj = {};
+      headers.forEach((h,i) => obj[h] = (cols[i]||'').trim().replace(/^"|"$/g,''));
+      return obj;
+    }).filter(m => m.id);
+  } catch(e) { console.warn('CMS load failed:', e); }
+}
+
+function parseCsvLine(line) {
+  const result=[]; let cur='', inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"') inQ=!inQ;
+    else if(line[i]===',' && !inQ){result.push(cur);cur='';}
+    else cur+=line[i];
+  }
+  result.push(cur); return result;
+}
+
+// ── WIKIMEDIA COMMONS IMAGE FETCH ──
+// 마커 유형별 검색 변수
+const TYPE_KEYWORDS = {
+  CROSS:    'area boundary territory',
+  BRIDGE:   'route path between',
+  POINT:    'landmark spot location',
+  DIRECTION:'direction toward horizon',
+  SCALE:    'scale distance measure',
+  MONUMENT: 'monument memorial heritage',
+};
+
+// 이미지 캐시 (중복 호출 방지)
+const imgCache = {};
+
+async function fetchWikimediaImages(markerData, count=4) {
+  const subEnv = P_ENV_SUB || '';
+  const typeKw = TYPE_KEYWORDS[markerData.marker_type] || '';
+  const query  = (subEnv + ' ' + markerData.name_en + ' ' + typeKw).trim();
+
+  if (imgCache[query]) return imgCache[query];
+
+  try {
+    const url = 'https://commons.wikimedia.org/w/api.php?action=query&list=search'
+      + '&srsearch=' + encodeURIComponent(query)
+      + '&srnamespace=6&format=json&origin=*&srlimit=' + (count * 3); // 여유있게 요청
+
+    const res  = await fetch(url);
+    const data = await res.json();
+    const results = (data.query?.search || []);
+
+    // title → 직접 이미지 URL 변환
+    const urls = results
+      .map(r => {
+        const filename = r.title.replace('File:', '').replace(/ /g, '_');
+        return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(filename) + '?width=400';
+      })
+      .slice(0, count * 2); // 여유분 확보
+
+    imgCache[query] = urls;
+    return urls;
+  } catch(e) {
+    console.warn('Wikimedia fetch failed:', e);
+    return [];
+  }
+}
+
+// 이미지 풀 (마킹별 미리 로드)
+let currentImgPool = [];
+let imgPoolIndex   = 0;
+
+async function preloadImgPool(markerData) {
+  currentImgPool = await fetchWikimediaImages(markerData, 8);
+  imgPoolIndex   = 0;
+}
+
+function getNextImg() {
+  if (currentImgPool.length === 0) return null;
+  const url = currentImgPool[imgPoolIndex % currentImgPool.length];
+  imgPoolIndex++;
+  return url;
+}
+
+// ── INIT ENV UI ──
+function initEnvUI() {
+  document.getElementById('lp-env-name').textContent = P_ENV_MAIN || P_ENV || '—';
+
+  // spatial index bg
+  const siBg = document.getElementById('si-bg');
+  if (P_ENV_MAIN && MAPS_API_KEY) {
+    const m = cmsMarkings.find(x => x.env_main === P_ENV_MAIN);
+    if (m && m.lat) {
+      const zoom = Math.max(1, (parseInt(m.zoom)||14) - 3);
+      siBg.src = 'https://maps.googleapis.com/maps/api/staticmap?center=' + m.lat + ',' + m.lng + '&zoom=' + zoom + '&size=400x200&maptype=satellite&key=' + MAPS_API_KEY;
+      siBg.style.display = 'block';
+    }
+  }
+
+  // 현재 환경의 마킹 목록 (같은 env_sub 우선, 나머지도 포함)
+  const subMarkings   = cmsMarkings.filter(m => m.env_sub === P_ENV_SUB);
+  const otherMarkings = cmsMarkings.filter(m => m.env_main === P_ENV_MAIN && m.env_sub !== P_ENV_SUB);
+  envMarkings = [...subMarkings, ...otherMarkings];
+
+  // 선택된 마킹
+  selectedMarkingData = cmsMarkings.find(m => m.id === P_MARKER) || subMarkings[0] || null;
+
+  renderMarkerList();
+  updateCurrentMarkingUI();
+  if (selectedMarkingData) preloadImgPool(selectedMarkingData);
+}
+
+// ── MARKER LIST RENDER ──
+function renderMarkerList() {
+  const listEl = document.getElementById('marker-list');
+  if (envMarkings.length === 0) {
+    listEl.innerHTML = '<div style="padding:8px 18px;font-size:8px;color:#ccc;">No markings found.</div>';
+    return;
+  }
+
+  const TYPE_COLORS = {
+    CROSS:'#3a6aaa', BRIDGE:'#7a3aaa', POINT:'#aa3a3a',
+    DIRECTION:'#3a8a3a', SCALE:'#8a7a2a', MONUMENT:'#555'
+  };
+
+  listEl.innerHTML = envMarkings.map(m => {
+    const isActive = selectedMarkingData && m.id === selectedMarkingData.id;
+    const color = TYPE_COLORS[m.marker_type] || '#888';
+    const thumbHtml = m.symbol_img
+      ? '<img src="' + m.symbol_img + '" alt="' + m.name_en + '"/>'
+      : '<div class="ml-thumb-ph">' + (m.name_en||'').split(' ')[0] + '</div>';
+    return '<div class="ml-row' + (isActive ? ' active' : '') + '" data-id="' + m.id + '" onclick="switchMarking(\'' + m.id + '\')">'
+      + '<div class="ml-thumb">' + thumbHtml + '</div>'
+      + '<div class="ml-info">'
+      + '<div class="ml-name">' + m.name_en + '</div>'
+      + '<div class="ml-type" style="color:' + (isActive ? color : '') + '">' + (m.marker_type||'') + '</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+// ── SWITCH MARKING ──
+function switchMarking(markingId) {
+  const m = cmsMarkings.find(x => x.id === markingId);
+  if (!m) return;
+  selectedMarkingData = m;
+  selectedType = m.marker_type || 'CROSS';
+
+  // update list highlight
+  document.querySelectorAll('.ml-row').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === markingId);
+  });
+
+  updateCurrentMarkingUI();
+  preloadImgPool(m); // 새 마킹의 이미지 풀 로드
+  infoEl.textContent = 'Marking: ' + m.name_en;
+}
+
+function updateCurrentMarkingUI() {
+  const m = selectedMarkingData;
+  if (!m) {
+    document.getElementById('cm-name').textContent = P_NAME || '—';
+    document.getElementById('cm-type').textContent = selectedType || '';
+    document.getElementById('cm-desc').textContent = '';
+    document.getElementById('cm-symbol').innerHTML = '<div class="cm-ph">—</div>';
+    return;
+  }
+  document.getElementById('cm-name').textContent = m.name_en || m.id;
+  document.getElementById('cm-type').textContent = (m.marker_type||'') + ' · ' + (m.spatial_role||'');
+  document.getElementById('cm-desc').textContent = m.description_en || '';
+  if (m.symbol_img) {
+    document.getElementById('cm-symbol').innerHTML = '<img src="' + m.symbol_img + '" alt="' + m.name_en + '"/>';
+  } else {
+    document.getElementById('cm-symbol').innerHTML = '<div class="cm-ph">' + (m.name_en||'').split(' ').slice(0,2).join('<br>') + '</div>';
+  }
+}
+
+// ── THREE.JS ──
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf2f2f2);
+scene.fog = new THREE.Fog(0xf2f2f2, 80, 600);
+
+const W=40, CELL=2, FAR=600, BACK=20, Y=0;
+const camera3 = new THREE.PerspectiveCamera(70,1,0.05,660);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.9));
+const dl = new THREE.DirectionalLight(0xffffff,0.35);
+dl.position.set(4,8,4); scene.add(dl);
+
+const lmat = new THREE.LineBasicMaterial({color:0xcccccc,transparent:true,opacity:0.7});
+for(let x=-W;x<=W+0.001;x+=CELL)
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x,Y,BACK),new THREE.Vector3(x,Y,-FAR)]),lmat));
+for(let z=BACK;z>=-FAR;z-=CELL)
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-W,Y,z),new THREE.Vector3(W,Y,z)]),lmat));
+
+const hitPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(W*2,FAR+BACK),
+  new THREE.MeshBasicMaterial({visible:false,side:THREE.DoubleSide})
+);
+hitPlane.rotation.x=-Math.PI/2; hitPlane.position.y=Y+0.001; scene.add(hitPlane);
+
+function w2g(wx,wz){return{col:Math.floor(wx/CELL),row:Math.floor(wz/CELL)};}
+function cellCenter(col,row){return{x:(col+0.5)*CELL,z:(row+0.5)*CELL};}
+function gkey(c,r){return c+','+r;}
+
+// ── STATE ──
+const gridState={}, revealedCells={};
+let selectedType = P_TYPE || 'CROSS';
+let bridgeFirst=null, scaleFirst=null, anchorCount=0;
+const startTime=Date.now(), anchors=[];
+let pendingCol=null, pendingRow=null;
+
+const TYPE_CONFIG={
+  CROSS:    {color:'#3a6aaa',obj:0x4a80cc,edge:0x88b0ee,rev:[0xddeeff,0x88b8ee]},
+  BRIDGE:   {color:'#7a3aaa',obj:0x7a4acc,edge:0xbb88ee,rev:[0xeeddff,0xbb88ee]},
+  POINT:    {color:'#aa3a3a',obj:0xcc4a4a,edge:0xee8888,rev:[0xffdddd,0xee9999]},
+  DIRECTION:{color:'#3a8a3a',obj:0x4acc4a,edge:0x88ee88,rev:[0xddffdd,0x88dd88]},
+  SCALE:    {color:'#8a7a2a',obj:0xccaa2a,edge:0xeedd88,rev:[0xfffacc,0xeecc44]},
+  MONUMENT: {color:'#555',  obj:0x888888,edge:0xaaaaaa,rev:[0xeeeeee,0xbbbbbb]},
+};
+
+// ── REVEAL CELL (Wikimedia 이미지) ──
+function revealCell(col,row,light,dark,anchorId,opacity=0.88){
+  const key=gkey(col,row);
+  if(revealedCells[key])return;
+
+  const cv=document.createElement('canvas'); cv.width=cv.height=256;
+  const ctx=cv.getContext('2d');
+  drawColorCell(ctx,light,dark); // 즉시 색상 placeholder
+
+  const tex=new THREE.CanvasTexture(cv);
+  const mesh=new THREE.Mesh(
+    new THREE.PlaneGeometry(CELL,CELL),
+    new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity,side:THREE.DoubleSide})
+  );
+  mesh.rotation.x=-Math.PI/2;
+  const cp=cellCenter(col,row);
+  mesh.position.set(cp.x,Y+0.005,cp.z);
+  scene.add(mesh);
+  revealedCells[key]={mesh,anchorId,col,row,colorLight:light,colorDark:dark};
+  document.getElementById('stat-discovery').textContent=Object.keys(revealedCells).length;
+
+  // Wikimedia 이미지 비동기 로드
+  const imgUrl = getNextImg();
+  if (imgUrl) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.clearRect(0,0,256,256);
+      // 이미지를 정사각형으로 크롭해서 그리기
+      const s = Math.min(img.width, img.height);
+      const sx = (img.width - s) / 2;
+      const sy = (img.height - s) / 2;
+      ctx.drawImage(img, sx, sy, s, s, 0, 0, 256, 256);
+      tex.needsUpdate = true;
+    };
+    img.onerror = () => {
+      // 실패시 다음 이미지 시도
+      const nextUrl = getNextImg();
+      if (nextUrl && nextUrl !== imgUrl) { img.src = nextUrl; }
+    };
+    img.src = imgUrl;
+  }
+}
+
+function drawColorCell(ctx,light,dark){
+  const r1=(light>>16)&255,g1=(light>>8)&255,b1=light&255;
+  const r2=(dark>>16)&255,g2=(dark>>8)&255,b2=dark&255;
+  const grad=ctx.createRadialGradient(128,128,8,128,128,140);
+  grad.addColorStop(0,'rgb('+r1+','+g1+','+b1+')');
+  grad.addColorStop(1,'rgb('+r2+','+g2+','+b2+')');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,256,256);
+  ctx.strokeStyle='rgba(0,0,0,0.04)'; ctx.lineWidth=1; ctx.strokeRect(1,1,254,254);
+}
+
+// ── SPAWN MARKER 3D ──
+function spawnMarker(cp,type,extraData){
+  const C=TYPE_CONFIG[type]||TYPE_CONFIG.CROSS;
+  const s=CELL*0.62;
+  let mesh;
+
+  // 심볼 이미지 텍스처 로드 시도
+  const symImg = selectedMarkingData?.symbol_img || null;
+
+  function makeMat(geo) {
+    if (symImg) {
+      const loader = new THREE.TextureLoader();
+      const mat = new THREE.MeshLambertMaterial({color:C.obj,transparent:true,opacity:0.88});
+      loader.crossOrigin = 'anonymous';
+      loader.load(symImg,
+        (tex) => { mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true; },
+        undefined,
+        () => {} // error: keep color
+      );
+      return mat;
+    }
+    return new THREE.MeshLambertMaterial({color:C.obj,transparent:true,opacity:0.88});
+  }
+
+  if(type==='POINT'){
+    const geo=new THREE.SphereGeometry(s*0.55,16,16);
+    mesh=new THREE.Mesh(geo, makeMat(geo));
+    mesh.position.set(cp.x,s*0.55,cp.z);
+  } else if(type==='DIRECTION'){
+    const geo=new THREE.ConeGeometry(s*0.4,s*0.85,8);
+    mesh=new THREE.Mesh(geo, makeMat(geo));
+    mesh.position.set(cp.x,s*0.45,cp.z);
+    const rotMap={N:0,S:Math.PI,E:-Math.PI/2,W:Math.PI/2};
+    mesh.rotation.y=rotMap[extraData?.dir||'N']||0;
+  } else if(type==='MONUMENT'){
+    const geo=new THREE.BoxGeometry(s*0.28,s*1.8,s*0.28);
+    mesh=new THREE.Mesh(geo, makeMat(geo));
+    mesh.position.set(cp.x,s*0.9,cp.z);
+  } else if(type==='SCALE'){
+    const geo=new THREE.BoxGeometry(s*1.4,s*0.16,s*0.16);
+    mesh=new THREE.Mesh(geo, makeMat(geo));
+    mesh.position.set(cp.x,s*0.16,cp.z);
+  } else {
+    const geo=new THREE.BoxGeometry(s,s,s);
+    mesh=new THREE.Mesh(geo, makeMat(geo));
+    mesh.position.set(cp.x,s/2,cp.z);
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:C.edge,transparent:true,opacity:0.35})));
+  }
+  scene.add(mesh);
+  return mesh;
+}
+
+// ── PLACE OBJECT ──
+function placeObject(col,row,type,extraData={}){
+  const key=gkey(col,row); if(gridState[key])return;
+  const cp=cellCenter(col,row);
+  const elapsed=fmtTime(Date.now()-startTime);
+  const C=TYPE_CONFIG[type]||TYPE_CONFIG.CROSS;
+  const pal=C.rev;
+  const mesh=spawnMarker(cp,type,extraData);
+  gridState[key]={type,mesh};
+  let anchor=null;
+
+  if(type==='CROSS'){
+    const id=makeId();
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dc,dr])=>revealCell(col+dc,row+dr,pal[0],pal[1],id));
+    anchor={id,type,col,row,worldX:cp.x,worldZ:cp.z,cells:4,meta:'4 cells · '+elapsed,linkedTo:null};
+    anchors.push(anchor); addMiRow(anchor);
+    infoEl.textContent='#'+id+' placed'; targetZ-=AUTO_ADVANCE;
+
+  }else if(type==='BRIDGE'){
+    if(!bridgeFirst){
+      const id=makeId();
+      anchor={id,type:'BRIDGE-A',col,row,worldX:cp.x,worldZ:cp.z,cells:0,meta:'bridge origin · '+elapsed,linkedTo:null};
+      anchors.push(anchor); addMiRow(anchor);
+      bridgeFirst={col,row,id,pal};
+      infoEl.textContent='Bridge — select endpoint'; targetZ-=CELL*0.3;
+    }else{
+      const c1=bridgeFirst.col,r1=bridgeFirst.row,c2=col,r2=row;
+      const steps=Math.max(Math.abs(c2-c1),Math.abs(r2-r1));
+      for(let i=0;i<=steps;i++){
+        const t=steps===0?0:i/steps;
+        revealCell(Math.round(c1+(c2-c1)*t),Math.round(r1+(r2-r1)*t),pal[0],pal[1],null);
+      }
+      const id=makeId();
+      anchor={id,type:'BRIDGE-B',col,row,worldX:cp.x,worldZ:cp.z,cells:steps+1,meta:steps+1+' cells · '+elapsed,linkedTo:bridgeFirst.id};
+      anchors.push(anchor); addMiRow(anchor);
+      infoEl.textContent='Bridge: '+(steps+1)+' cells'; bridgeFirst=null; targetZ-=AUTO_ADVANCE;
+    }
+
+  }else if(type==='POINT'){
+    const id=makeId();
+    revealCell(col,row,pal[0],pal[1],id,0.95);
+    anchor={id,type,col,row,worldX:cp.x,worldZ:cp.z,cells:1,meta:'point · '+elapsed,linkedTo:null};
+    anchors.push(anchor); addMiRow(anchor);
+    infoEl.textContent='#'+id+' placed'; targetZ-=AUTO_ADVANCE;
+
+  }else if(type==='DIRECTION'){
+    const id=makeId();
+    const dir=extraData.dir||'N';
+    const dv={N:[0,-1],S:[0,1],E:[1,0],W:[-1,0]}[dir]||[0,-1];
+    const REACH=8;
+    for(let i=1;i<=REACH;i++){
+      revealCell(col+dv[0]*i,row+dv[1]*i,pal[0],pal[1],id,0.88*(1-(i/REACH)*0.65));
+    }
+    anchor={id,type,col,row,worldX:cp.x,worldZ:cp.z,cells:REACH,meta:dir+' · '+REACH+' cells · '+elapsed,linkedTo:null};
+    anchors.push(anchor); addMiRow(anchor);
+    infoEl.textContent='Direction '+dir; targetZ-=AUTO_ADVANCE;
+
+  }else if(type==='SCALE'){
+    if(!scaleFirst){
+      const id=makeId();
+      anchor={id,type:'SCALE-A',col,row,worldX:cp.x,worldZ:cp.z,cells:0,meta:'scale origin · '+elapsed,linkedTo:null};
+      anchors.push(anchor); addMiRow(anchor);
+      scaleFirst={col,row,id,pal};
+      infoEl.textContent='Scale — select endpoint'; targetZ-=CELL*0.3;
+    }else{
+      const c1=scaleFirst.col,r1=scaleFirst.row,c2=col,r2=row;
+      const steps=Math.max(Math.abs(c2-c1),Math.abs(r2-r1));
+      for(let i=0;i<=steps;i+=2){
+        const t=steps===0?0:i/steps;
+        revealCell(Math.round(c1+(c2-c1)*t),Math.round(r1+(r2-r1)*t),pal[0],pal[1],null);
+      }
+      const id=makeId();
+      const dist=Math.sqrt((c2-c1)**2+(r2-r1)**2).toFixed(1);
+      anchor={id,type:'SCALE-B',col,row,worldX:cp.x,worldZ:cp.z,cells:Math.ceil(steps/2)+1,meta:'1u='+dist+' cells · '+elapsed,linkedTo:scaleFirst.id};
+      anchors.push(anchor); addMiRow(anchor);
+      infoEl.textContent='Scale: 1u='+dist+' cells'; scaleFirst=null; targetZ-=AUTO_ADVANCE;
+    }
+
+  }else if(type==='MONUMENT'){
+    const id=makeId();
+    const text=extraData.text||'UNNAMED';
+    const cv=document.createElement('canvas');cv.width=256;cv.height=64;
+    const ctx=cv.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,256,64);
+    ctx.font='13px monospace';ctx.fillStyle='#555';ctx.fillText(text,8,36);
+    const tex=new THREE.CanvasTexture(cv);
+    const lbl=new THREE.Mesh(new THREE.PlaneGeometry(CELL*1.8,CELL*0.45),new THREE.MeshBasicMaterial({map:tex,transparent:true,side:THREE.DoubleSide}));
+    lbl.position.set(cp.x,CELL*1.1,cp.z); lbl.rotation.x=-0.3; scene.add(lbl);
+    anchor={id,type,col,row,worldX:cp.x,worldZ:cp.z,cells:0,meta:'"'+text+'" · '+elapsed,linkedTo:null};
+    anchors.push(anchor); addMiRow(anchor);
+    infoEl.textContent='Monument: '+text; targetZ-=AUTO_ADVANCE;
+  }
+
+  document.getElementById('stat-markers').textContent=anchors.length;
+}
+
+// ── MARKER INDEX ROW ──
+function addMiRow(anchor){
+  const C=TYPE_CONFIG[anchor.type.replace('-A','').replace('-B','')||'CROSS'];
+  const tbody=document.getElementById('mi-tbody');
+  const tr=document.createElement('tr');
+  tr.className='mi-row';
+  tr.innerHTML=
+    '<td class="mi-td" style="font-size:8px;color:#3a6aaa;">#'+anchor.id+'</td>'
+    +'<td class="mi-td"><span class="type-chip" style="background:'+C.color+'">'+anchor.type+'</span></td>'
+    +'<td class="mi-td" style="color:#aaa;font-size:7px;">'+Math.abs(anchor.worldZ).toFixed(0)+'</td>'
+    +'<td class="mi-td" style="color:#bbb;font-size:7px;">'+anchor.cells+'</td>';
+  tr.addEventListener('click',()=>jumpTo(anchor.worldZ));
+  tbody.insertBefore(tr,tbody.firstChild);
+}
+
+// ── MODALS ──
+function placeWithModal(col,row,type){
+  pendingCol=col; pendingRow=row;
+  if(type==='MONUMENT'){
+    document.getElementById('mon-input').value='';
+    document.getElementById('monument-modal').style.display='flex';
+    setTimeout(()=>document.getElementById('mon-input').focus(),100);
+  }else if(type==='DIRECTION'){
+    document.getElementById('direction-modal').classList.add('show');
+  }else{
+    placeObject(col,row,type);
+  }
+}
+function confirmMonument(){
+  const text=document.getElementById('mon-input').value.trim()||'UNNAMED';
+  document.getElementById('monument-modal').style.display='none';
+  placeObject(pendingCol,pendingRow,'MONUMENT',{text});
+}
+function confirmDirection(dir){
+  document.getElementById('direction-modal').classList.remove('show');
+  placeObject(pendingCol,pendingRow,'DIRECTION',{dir});
+}
+function cancelModal(){
+  document.getElementById('direction-modal').classList.remove('show');
+  document.getElementById('monument-modal').style.display='none';
+}
+document.getElementById('mon-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter')confirmMonument();
+  if(e.key==='Escape')cancelModal();
+});
+
+// ── HOVER ──
+let hoverMesh=null;
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+
+function getGrid(e){
+  const rect=canvas.getBoundingClientRect();
+  mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera3);
+  const hits=raycaster.intersectObject(hitPlane);
+  if(!hits.length)return null;
+  return w2g(hits[0].point.x,hits[0].point.z);
+}
+
+canvas.addEventListener('mousemove',e=>{
+  const g=getGrid(e);
+  if(!g){if(hoverMesh)hoverMesh.visible=false;return;}
+  if(!hoverMesh){
+    hoverMesh=new THREE.Mesh(
+      new THREE.PlaneGeometry(CELL,CELL),
+      new THREE.MeshBasicMaterial({color:0x4a80cc,transparent:true,opacity:0.1,side:THREE.DoubleSide})
+    );
+    hoverMesh.rotation.x=-Math.PI/2; hoverMesh.position.y=Y+0.008; scene.add(hoverMesh);
+  }
+  const cp=cellCenter(g.col,g.row);
+  hoverMesh.position.x=cp.x; hoverMesh.position.z=cp.z; hoverMesh.visible=true;
+});
+
+canvas.addEventListener('click',e=>{
+  const g=getGrid(e);
+  if(g) placeWithModal(g.col,g.row,selectedType);
+});
+
+// ── CAMERA ──
+let targetZ=0, currentZ=0, jumpMode=false;
+const AUTO_ADVANCE=CELL*0.8, SCROLL_STEP=CELL*0.25;
+
+function jumpTo(wz){targetZ=wz-4;jumpMode=true;setTimeout(()=>{jumpMode=false;},2000);}
+
+const canvasBox=document.getElementById('canvas-box');
+canvasBox.addEventListener('wheel',e=>{
+  e.preventDefault();
+  targetZ-=Math.sign(e.deltaY)*SCROLL_STEP;
+},{passive:false});
+
+function resize(){
+  const w=canvasBox.clientWidth, h=canvasBox.clientHeight;
+  renderer.setSize(w,h,false);
+  camera3.aspect=w/h;
+  camera3.updateProjectionMatrix();
+}
+window.addEventListener('resize',resize);
+setTimeout(resize,100);
+
+// ── TIMER & UI ──
+const infoEl=document.getElementById('place-info');
+function pad(n,l=2){return String(Math.floor(Math.abs(n))).padStart(l,'0');}
+function fmtTime(ms){
+  const s=Math.floor(ms/1000)%60,m=Math.floor(ms/60000)%60,h=Math.floor(ms/3600000);
+  return h>0?pad(h)+':'+pad(m)+':'+pad(s):pad(m)+':'+pad(s);
+}
+function makeId(){anchorCount++;return 'anchor-'+String(anchorCount).padStart(3,'0');}
+
+setInterval(()=>{
+  const cz=camera3.position.z;
+  document.getElementById('stat-depth').textContent=Math.max(0,-cz).toFixed(1);
+  document.getElementById('stat-time').textContent=fmtTime(Date.now()-startTime);
+},500);
+
+// ── ANIMATE ──
+function animate(){
+  requestAnimationFrame(animate);
+  const speed=jumpMode?0.055:0.012;
+  currentZ+=(targetZ-currentZ)*speed;
+  camera3.position.set(0,6,currentZ+4);
+  camera3.rotation.set(-0.9,0,0);
+  hitPlane.position.z=currentZ;
+  renderer.render(scene,camera3);
+}
+animate();
+
+function exportWebsite(){ alert('Export coming soon!'); }
+
+// ── BOOT ──
+async function boot(){
+  await loadCMS();
+  initEnvUI();
+}
+boot();
+
+// 파일명으로 실제 이미지 URL 가져오기
+fetch('https://commons.wikimedia.org/w/api.php?action=query&titles=File:Cairn_and_Galtymore_Mountain.jpg&prop=imageinfo&iiprop=url&format=json&origin=*')
+  .then(r=>r.json())
+  .then(d=>{
+    const pages = d.query.pages;
+    const page = Object.values(pages)[0];
+    console.log(page.imageinfo[0].url);
+  })
+</script>
+</body>
+</html>

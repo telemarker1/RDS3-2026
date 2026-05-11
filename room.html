@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Room Visualization</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="header">
+        <h3>Appropriation of spaces</h3>
+        <h3>Markings Archive</h3>
+    </header>
+    
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0/build/three.module.js';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+
+        let scene, camera, renderer, controls;
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            // 거대한 방이므로 카메라를 조금 더 뒤로 뺍니다.
+            camera.position.set(10, 10, 10); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            const light = new THREE.AmbientLight(0xffffff, 1);
+            scene.add(light);
+
+            const textureLoader = new THREE.TextureLoader();
+
+            // 타일링 설정 함수
+            function applyTiling(texture, repeatCount) {
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                texture.repeat.set(repeatCount, repeatCount);
+            }
+
+            // 설정값 (여기서만 조절하시면 됩니다)
+            const repeatCount = 10; 
+            const roomSize = 50;  // 방을 더 크게 만들었습니다.
+            const offset = roomSize / 2;
+
+            // 1. 바닥 (1.jpeg)
+            const floorTex = textureLoader.load('img/1.jpeg');
+            applyTiling(floorTex, repeatCount);
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(roomSize, roomSize),
+                new THREE.MeshBasicMaterial({ map: floorTex, side: THREE.DoubleSide })
+            );
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -offset;
+            scene.add(floor);
+
+            // 2. 왼쪽 벽 (2.jpg)
+            const leftTex = textureLoader.load('img/2.jpg');
+            applyTiling(leftTex, repeatCount); // 이 부분 변수 수정됨
+            const leftWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(roomSize, roomSize),
+                new THREE.MeshBasicMaterial({ map: leftTex, side: THREE.DoubleSide })
+            );
+            leftWall.rotation.y = Math.PI / 2;
+            leftWall.position.x = -offset;
+            scene.add(leftWall);
+
+            // 3. 정면 벽 (3.jpg)
+            const frontTex = textureLoader.load('img/3.jpg');
+            applyTiling(frontTex, repeatCount); // 이 부분 변수 수정됨
+            const frontWall = new THREE.Mesh(
+                new THREE.PlaneGeometry(roomSize, roomSize),
+                new THREE.MeshBasicMaterial({ map: frontTex, side: THREE.DoubleSide })
+            );
+            frontWall.position.z = -offset;
+            scene.add(frontWall);
+
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
