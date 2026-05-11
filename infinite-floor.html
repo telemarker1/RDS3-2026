@@ -435,30 +435,34 @@ async function fetchWikimediaImages(markerData, count=4) {
     // 1단계: 파일 목록 검색
     const searchUrl = 'https://commons.wikimedia.org/w/api.php?action=query&list=search'
       + '&srsearch=' + encodeURIComponent(query)
-      + '&srnamespace=6&format=json&origin=*&srlimit=' + (count * 3);
+      + '&srnamespace=6&format=json&origin=*&srlimit=20';
 
     const searchRes  = await fetch(searchUrl);
     const searchData = await searchRes.json();
     const titles = (searchData.query && searchData.query.search ? searchData.query.search : [])
       .map(function(r){ return r.title; })
+      .filter(function(t){ return t.match(/\.(jpg|jpeg|png|gif|webp)$/i); }) // jpg/png만
       .slice(0, count * 2);
 
-    if (titles.length === 0) return [];
+    if (titles.length === 0) { imgCache[query] = []; return []; }
 
-    // 2단계: title -> 실제 이미지 URL (imageinfo API)
-    const titlesParam = titles.map(function(t){ return t.replace(/ /g,'_'); }).join('|');
-    const infoUrl = 'https://commons.wikimedia.org/w/api.php?action=query'
-      + '&titles=' + encodeURIComponent(titlesParam)
-      + '&prop=imageinfo&iiprop=url&format=json&origin=*&iiurlwidth=600';
-
-    const infoRes  = await fetch(infoUrl);
-    const infoData = await infoRes.json();
-    const pages = Object.values((infoData.query && infoData.query.pages) ? infoData.query.pages : {});
-
-    const urls = pages
-      .filter(function(p){ return p.imageinfo && p.imageinfo[0] && p.imageinfo[0].url; })
-      .map(function(p){ return p.imageinfo[0].url; })
-      .filter(function(u){ return u.match(/\.(jpg|jpeg|png|gif|webp)/i); });
+    // 2단계: 타이틀 하나씩 imageinfo 요청
+    const urls = [];
+    for (var i = 0; i < titles.length; i++) {
+      try {
+        const t = titles[i].replace(/ /g, '_');
+        const infoUrl = 'https://commons.wikimedia.org/w/api.php?action=query'
+          + '&titles=' + encodeURIComponent(t)
+          + '&prop=imageinfo&iiprop=url&format=json&origin=*&iiurlwidth=600';
+        const infoRes  = await fetch(infoUrl);
+        const infoData = await infoRes.json();
+        const page = Object.values(infoData.query.pages)[0];
+        if (page && page.imageinfo && page.imageinfo[0] && page.imageinfo[0].url) {
+          urls.push(page.imageinfo[0].url);
+        }
+        if (urls.length >= count) break;
+      } catch(e2) { continue; }
+    }
 
     console.log('Wikimedia URLs for "' + query + '":', urls);
     imgCache[query] = urls;
