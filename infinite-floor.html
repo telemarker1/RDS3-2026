@@ -432,22 +432,35 @@ async function fetchWikimediaImages(markerData, count=4) {
   if (imgCache[query]) return imgCache[query];
 
   try {
-    const url = 'https://commons.wikimedia.org/w/api.php?action=query&list=search'
+    // 1단계: 파일 목록 검색
+    const searchUrl = 'https://commons.wikimedia.org/w/api.php?action=query&list=search'
       + '&srsearch=' + encodeURIComponent(query)
-      + '&srnamespace=6&format=json&origin=*&srlimit=' + (count * 3); // 여유있게 요청
+      + '&srnamespace=6&format=json&origin=*&srlimit=' + (count * 3);
 
-    const res  = await fetch(url);
-    const data = await res.json();
-    const results = (data.query?.search || []);
+    const searchRes  = await fetch(searchUrl);
+    const searchData = await searchRes.json();
+    const titles = (searchData.query && searchData.query.search ? searchData.query.search : [])
+      .map(function(r){ return r.title; })
+      .slice(0, count * 2);
 
-    // title → 직접 이미지 URL 변환
-    const urls = results
-      .map(r => {
-        const filename = r.title.replace('File:', '').replace(/ /g, '_');
-        return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(filename) + '?width=400';
-      })
-      .slice(0, count * 2); // 여유분 확보
+    if (titles.length === 0) return [];
 
+    // 2단계: title -> 실제 이미지 URL (imageinfo API)
+    const titlesParam = titles.map(function(t){ return t.replace(/ /g,'_'); }).join('|');
+    const infoUrl = 'https://commons.wikimedia.org/w/api.php?action=query'
+      + '&titles=' + encodeURIComponent(titlesParam)
+      + '&prop=imageinfo&iiprop=url&format=json&origin=*&iiurlwidth=600';
+
+    const infoRes  = await fetch(infoUrl);
+    const infoData = await infoRes.json();
+    const pages = Object.values((infoData.query && infoData.query.pages) ? infoData.query.pages : {});
+
+    const urls = pages
+      .filter(function(p){ return p.imageinfo && p.imageinfo[0] && p.imageinfo[0].url; })
+      .map(function(p){ return p.imageinfo[0].url; })
+      .filter(function(u){ return u.match(/\.(jpg|jpeg|png|gif|webp)/i); });
+
+    console.log('Wikimedia URLs for "' + query + '":', urls);
     imgCache[query] = urls;
     return urls;
   } catch(e) {
@@ -950,15 +963,6 @@ async function boot(){
   initEnvUI();
 }
 boot();
-
-// 파일명으로 실제 이미지 URL 가져오기
-fetch('https://commons.wikimedia.org/w/api.php?action=query&titles=File:Cairn_and_Galtymore_Mountain.jpg&prop=imageinfo&iiprop=url&format=json&origin=*')
-  .then(r=>r.json())
-  .then(d=>{
-    const pages = d.query.pages;
-    const page = Object.values(pages)[0];
-    console.log(page.imageinfo[0].url);
-  })
 </script>
 </body>
 </html>
